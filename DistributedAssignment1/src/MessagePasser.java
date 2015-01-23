@@ -5,7 +5,8 @@ public class MessagePasser {
 	
 	
 	public Message receive(){
-		Message a = new Message();
+		Message a = new Message(null, null, a);
+		
 		return a;
 	}
 	
