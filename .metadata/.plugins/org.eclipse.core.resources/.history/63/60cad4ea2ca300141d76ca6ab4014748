@@ -1,0 +1,5 @@
+import Message;
+
+public class MessagePasser {
+    //done
+}

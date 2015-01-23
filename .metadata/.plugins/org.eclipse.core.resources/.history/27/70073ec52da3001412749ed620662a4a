@@ -1,0 +1,12 @@
+
+
+public class MessagePasser {
+    //done
+	Message a = new Message();
+	
+	public Message receive(){
+		
+	}
+	
+}
+

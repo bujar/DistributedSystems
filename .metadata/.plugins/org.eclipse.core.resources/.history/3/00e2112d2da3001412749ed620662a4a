@@ -1,0 +1,6 @@
+import Message;
+import ReceiveMessage;
+
+public class MessagePasser {
+    //done
+}
