@@ -1,0 +1,13 @@
+import java.awt.List;
+import java.util.ArrayList;
+
+public static Host hostList;
+
+public class MessagePasser {
+    //done
+	Host h = new Host(null, null, null);
+	
+	ArrayList<Host> hostList = new ArrayList<Host>();
+	
+}
+

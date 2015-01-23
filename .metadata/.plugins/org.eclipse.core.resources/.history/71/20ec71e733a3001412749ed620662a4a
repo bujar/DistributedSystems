@@ -1,0 +1,13 @@
+import java.awt.List;
+
+
+
+public class MessagePasser {
+    //done
+	Host h = new Host();
+	
+	List hostList = new List();
+	hostList.add(h);
+	
+}
+

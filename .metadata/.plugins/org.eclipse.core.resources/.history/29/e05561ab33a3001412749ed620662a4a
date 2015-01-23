@@ -1,0 +1,10 @@
+import java.awt.List;
+
+
+
+public class MessagePasser {
+    //done
+	List<Host> hostList = new List()<Host>;
+	
+}
+
