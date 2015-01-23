@@ -1,8 +1,11 @@
 
 public class SendMessage {
     public void send(Message m){
-        for(int i=0; i < hostlist.length(); i++){
-            if(hostlist.get(i).name == m.)
+        //checkrules
+        for(int i=0; i < hostList.length(); i++){
+            if(hostList.get(i).name == m.dest){
+                hostList.get(i).sock.send(m);
+            }
         }
     }
 }
