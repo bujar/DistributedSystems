@@ -1,5 +1,6 @@
 
-public class Message {
+import java.io.Serializable;
+public class Message implements Serializable{
     public String dest;
     public String kind;
     public Object data;
