@@ -9,6 +9,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -35,30 +38,74 @@ public class MessagePasser {
 
         String action = "bind";
         Integer localport = 0;
-        for (Map<String, Object> key : config) {
+        Host localhost = null;
+        boolean myturn = false;
+        int hostcounter = 1;
 
+        //iterate through config file to find own info
+        for (Map<String, Object> key : config) {
             String name = (String) key.get("name");
-            if(name == localName){
-                action = "listen";
+            if (name == localName) {
+                String ipAddr = (String) key.get("ip");
                 int port = (Integer) key.get("port");
                 localport = Integer.valueOf(port);
+                localhost = new Host(name, null, ipAddr);
             }
-            if(action == "listen"){
-                String ipAddr = (String) key.get("ip");
-                SocketHandler connection = new SocketHandler(action, "0.0.0.0", localport);
-                Host host = new Host(name, connection, ipAddr);
-                hostList.add(host);
-            }else{
+        }
+
+        //iterate through list again to connect to all machines
+        for (Map<String, Object> key : config) {
+            //is this me? if it is, go through rest of list and send my own Host object to every other person on list with diff connect port, wait for them to connect back to me, send ping to say I am done
+            //is this not me? then wait for this guy to connect to me and send me his Host object, connect to him based on what his host object said, store it, wait for ping to move on
+            String name = (String) key.get("name");
+            if (name == localName) {
+                myturn = true;
+            }
+            if (myturn && name != localName) {
                 String ipAddr = (String) key.get("ip");
                 int port = (Integer) key.get("port");
-                p = Integer.valueOf(port);
-                SocketHandler connection = new SocketHandler(action, ipAddr, p);
-                Host host = new Host(name, connection, ipAddr);
+                try {
+                    Socket connection = new Socket(ipAddr, port);
+                    localhost.port = localport + hostcounter;
+                    ObjectOutputStream output = new ObjectOutputStream(connection.getOutputStream());
+                    output.writeObject(localhost);
+                    output.close();
+                    connection.close();
+                    connection = (new ServerSocket(localport + hostcounter)).accept();
+                } catch (IOException ex) {
+                    Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                Host host = new Host(name, new SocketHandler(connection), ipAddr);
                 hostList.add(host);
+                hostcounter++;
+            } else if (name != localName) {
+                try {
+                    Socket connection = (new ServerSocket(localport)).accept();
+                    ObjectInputStream input = new ObjectInputStream(connection.getInputStream());
+                    Host received = (Host) input.readObject();
+                    input.close();
+                    connection.close();
+                    connection = new Socket(received.address, received.port);
+                    connection.getInputStream().read(); //should block until DONEPING is received
+                    received.sock = newSocketHandler(connection);
+                    hostList.add(received);
+                } catch (IOException ex) {
+                    Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ClassNotFoundException ex) {
+                    Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
-
+            System.out.println(hostList);
         }
-        System.out.println(hostList);
+        
+        //notify all other nodes that this one is done connecting to everyone
+        for(int i=0; i< hostList.size(); i++){
+            try {
+                hostList.get(i).sock.sock.getOutputStream().write(1);
+            } catch (IOException ex) {
+                Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
 
     public Map<String, ArrayList<Map<String, Object>>> getYamlData(String pathName) {
@@ -82,58 +129,82 @@ public class MessagePasser {
         seqNum++;
         for (int i = 0; i < hostList.size(); i++) {
             if (hostList.get(i).name == m.dest) {
-                hostList.get(i).socketHandler.send(m);
+                hostList.get(i).sock.send(m);
             }
         }
     }
-}
-
-class SocketHandler implements Runnable{
-  private Socket sock;
-  Queue<Message> receiveQueue;
-  DataOutputStream out;
-  DataInputStream in;
- 
-  public SocketHandler(String action, String host, int port)
-  {
-      try {
-          if(action == "listen"){
-              sock = (new ServerSocket(port)).accept();
-          }else if(action == "bind"){
-            sock = new Socket(host, port);
-          }else{
-              System.out.println("ERROR: Action given not valid");
-          }
-          out = new DataOutputStream(new BufferedOutputStream(sock.getOutputStream()));
-          in = new DataInputStream(new BufferedInputStream(sock.getInputStream()));
-          out.writeInt(port);
-          
-      } catch (IOException ex) {
-          Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
-      }
-  }
- public SocketHandler(Socket newsock){
-     sock = newsock;
- }
-
-  public void send(Message m){
-      sock.getOutputStream().write(m.);
-  }
-  public void run()
-  {
     
-  }
+    public Message receive() {
+        int i = 0;
+        while(hostList.get(i).sock.receiveQueue.isEmpty()){
+            i++;
+        }
+        return hostList.get(i).sock.receiveQueue.poll();
+    }
 }
 
-class Host {
+class SocketHandler implements Runnable {
+
+    public Socket sock;
+    public Queue<Message> receiveQueue;
+    private ObjectOutputStream output = null;
+    private ObjectInputStream input = null;
+
+    public SocketHandler(String action, String host, int port) {
+        try {
+            if (action == "listen") {
+                sock = (new ServerSocket(port)).accept();
+            } else if (action == "bind") {
+                sock = new Socket(host, port);
+            } else {
+                System.out.println("ERROR: Action given not valid");
+            }
+
+        } catch (IOException ex) {
+            Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public SocketHandler(Socket newsock) {
+        sock = newsock;
+    }
+
+    public void send(Message m) {
+
+        try {
+            output = new ObjectOutputStream(sock.getOutputStream());
+            output.writeObject(m);
+        } catch (IOException ex) {
+            Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void run() {
+        Message received = null;
+        try {
+            input = new ObjectInputStream(sock.getInputStream());
+            received = (Message) input.readObject();
+        } catch (IOException ex) {
+            Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        receiveQueue.add(received);
+    }
+}
+
+class Host implements Serializable {
+
+    private static final long serialVersionUID = 1529127835408294640L;
     public String name;
     public SocketHandler sock;
     public String address;
-    
-    public Host(String newname, SocketHandler newsock, String newaddress){
+    public int port;
+
+    public Host(String newname, SocketHandler newsock, String newaddress) {
         name = newname;
         sock = newsock;
         address = newaddress;
     }
-   
+
 }
