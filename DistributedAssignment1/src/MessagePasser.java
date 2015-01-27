@@ -114,11 +114,7 @@ public class MessagePasser {
             }
         }
         for (int i = 0; i < hostList.size(); i++) {
-            try {
-                hostList.get(i).sock.start();
-            } catch (IOException ex) {
-                Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            hostList.get(i).sock.start();
         }
     }
 
