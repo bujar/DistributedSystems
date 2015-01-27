@@ -72,12 +72,13 @@ public class MessagePasser {
                     output.close();
                     connection.close();
                     connection = (new ServerSocket(localport + hostcounter)).accept();
+                    Host host = new Host(name, new SocketHandler(connection), ipAddr);
+                    hostList.add(host);
+                    hostcounter++;
                 } catch (IOException ex) {
                     Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
                 }
-                Host host = new Host(name, new SocketHandler(connection), ipAddr);
-                hostList.add(host);
-                hostcounter++;
+
             } else if (name != localName) {
                 try {
                     Socket connection = (new ServerSocket(localport)).accept();
@@ -97,9 +98,9 @@ public class MessagePasser {
             }
             System.out.println(hostList);
         }
-        
+
         //notify all other nodes that this one is done connecting to everyone
-        for(int i=0; i< hostList.size(); i++){
+        for (int i = 0; i < hostList.size(); i++) {
             try {
                 hostList.get(i).sock.sock.getOutputStream().write(1);
             } catch (IOException ex) {
@@ -133,10 +134,10 @@ public class MessagePasser {
             }
         }
     }
-    
+
     public Message receive() {
         int i = 0;
-        while(hostList.get(i).sock.receiveQueue.isEmpty()){
+        while (hostList.get(i).sock.receiveQueue.isEmpty()) {
             i++;
         }
         return hostList.get(i).sock.receiveQueue.poll();
@@ -195,7 +196,7 @@ class SocketHandler implements Runnable {
 
 class Host implements Serializable {
 
-    private static final long serialVersionUID = 1529127835408294640L;
+    private static final long serialVersionUID = 1529127835408294641L;
     public String name;
     public SocketHandler sock;
     public String address;
