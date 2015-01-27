@@ -87,7 +87,7 @@ public class MessagePasser {
                     connection.close();
                     connection = new Socket(received.address, received.port);
                     connection.getInputStream().read(); //should block until DONEPING is received
-                    received.sock = newSocketHandler(connection);
+                    received.sock = new SocketHandler(connection);
                     hostList.add(received);
                 } catch (IOException ex) {
                     Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
