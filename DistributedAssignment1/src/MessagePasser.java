@@ -236,6 +236,7 @@ class SocketHandler implements Runnable {
             }
 
         } catch (IOException ex) {
+            System.out.println("how did it get here?"+ex.toString());
             Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -243,24 +244,31 @@ class SocketHandler implements Runnable {
     public SocketHandler(Socket newsock) {
         sock = newsock;
         receiveQueue = new LinkedList<Message>();
+        try {
+            output = new ObjectOutputStream(sock.getOutputStream());
+            input = new ObjectInputStream(sock.getInputStream());
+        } catch (IOException ex) {
+            System.out.println(ex.toString());
+            Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
     }
 
     public void send(Message m) {
 
         try {
-            output = new ObjectOutputStream(sock.getOutputStream());
             output.writeObject(m);
         } catch (IOException ex) {
+            System.out.println(ex.toString());
             Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
     public void run() {
         try {
-            input = new ObjectInputStream(sock.getInputStream());
+
             while (true) {
-                Message received = null;
-                received = (Message) input.readObject();
+                Message received = (Message) input.readObject();
                 receiveQueue.add(received);
             }
         } catch (IOException ex) {

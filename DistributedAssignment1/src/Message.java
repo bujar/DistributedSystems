@@ -1,32 +1,36 @@
 
 import java.io.Serializable;
-public class Message implements Serializable{
-	//Serial number needs to be the same in all instances. Randomly generated.
-	private static final long serialVersionUID = 1529127835408294640L;
-	public String dest;
+
+public class Message implements Serializable {
+
+    //Serial number needs to be the same in all instances. Randomly generated.
+
+    private static final long serialVersionUID = 1529127835408294640L;
+    public String dest;
     public String kind;
     public Object data;
     public String source;
     public int sequenceNumber;
     public Boolean dupe;
-    public Message(String newdest, String newkind, Object newdata){
+
+    public Message(String newdest, String newkind, Object newdata) {
         dest = newdest;
         kind = newkind;
         data = newdata;
     }
-    
-    public void set_source(String newsource){
+
+    public void set_source(String newsource) {
         source = newsource;
     }
-    
-    public void set_seqNum(int newsequenceNumber){
+
+    public void set_seqNum(int newsequenceNumber) {
         sequenceNumber = newsequenceNumber;
     }
-    public void set_duplicate(Boolean newdupe){
+
+    public void set_duplicate(Boolean newdupe) {
         dupe = newdupe;
     }
-    
-    
+
     /*
      * SendMessage Implementation
      * 
@@ -47,5 +51,3 @@ public class Message implements Serializable{
      * 
      */
 }
-
-

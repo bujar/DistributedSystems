@@ -35,9 +35,13 @@ class testNode implements Runnable {
         msg = new MessagePasser(configfile, name);
         if (name.equals("alice")) {
             msg.send(new Message("bob", "MX", "bla"));
+            msg.send(new Message("bob", "MX", "bla2"));
+            msg.send(new Message("charlie", "MX", "blatocharlie"));
+            msg.send(new Message("daphne", "MX", "blatodapne"));
             //System.out.println(msg.receive().data);
         } else if (name.equals("bob")) {
             msg.send(new Message("alice", "MX", "bla"));
+            msg.send(new Message("charlie", "MX", "alltheblastocharliefrombob"));
             //System.out.println(msg.receive().data);
         }
         try {
@@ -45,9 +49,17 @@ class testNode implements Runnable {
         } catch (InterruptedException ex) {
             Logger.getLogger(testNode.class.getName()).log(Level.SEVERE, null, ex);
         }
-        System.out.println(msg.receive().data);
-        System.out.println(msg.receive().data);
-
+        while (true) {
+            Message m = msg.receive();
+            if (m != null) {
+                System.out.println(name + " received: " + m.data);
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(testNode.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
 
     public void start() {
