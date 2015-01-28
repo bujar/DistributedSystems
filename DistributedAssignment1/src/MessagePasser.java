@@ -354,12 +354,19 @@ class SocketHandler implements Runnable {
 
     public SocketHandler(Socket newsock) {
         sock = newsock;
+            try {
+                output = new ObjectOutputStream(sock.getOutputStream());
+                input = new ObjectInputStream(sock.getInputStream());
+            } catch (IOException ex) {
+                Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        
         receiveQueue = new LinkedList<Message>();
     }
 
     public void send(Message m) {
         try {
-            output = new ObjectOutputStream(sock.getOutputStream());
+            
             output.writeObject(m);
         } catch (IOException ex) {
             Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
@@ -368,7 +375,7 @@ class SocketHandler implements Runnable {
 
     public void run() {
         try {
-            input = new ObjectInputStream(sock.getInputStream());
+            
             while (true) {
                 Message received = null;
                 received = (Message) input.readObject();
