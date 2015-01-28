@@ -61,28 +61,27 @@ public class MessagePasser {
         if (listencounter > 0) {
             try {
                 System.out.println(localName + " waiting for connection");
-                Socket connection = (new ServerSocket(localport)).accept();
-                                    ObjectInputStream input = new ObjectInputStream(connection.getInputStream());
+                ServerSocket server = (new ServerSocket(localport));
 
                 while (hostList.size() < listencounter) {
-                    if (connection.isClosed()) {
-                        connection = (new ServerSocket(localport)).accept();
-                    }
+                    Socket connection = server.accept();
+                    ObjectInputStream input = new ObjectInputStream(connection.getInputStream());
                     System.out.println(localName + " got a new connection");
-                  //  do {
-                        Host received = (Host) input.readObject();
-                        System.out.println(localName + " received object from " + received.name);
+                    //  do {
+                    Host received = (Host) input.readObject();
+                    System.out.println(localName + " received object from " + received.name);
 
-                        System.out.println(localName + " connecting to " + received.name + " over port " + received.port + " with address " + received.address);
-                        Socket connection2 = new Socket(received.address, received.port);
-                        if (connection2.isConnected()) {
-                            System.out.println(localName + " final connection to " + received.name + " succeeded");
-                        }
-                        //connection2.getInputStream().read(); //should block until DONEPING is received
-                        received.sock = new SocketHandler(connection2);
-                        hostList.add(received);
-                        System.out.println(localName + " added one host. " + hostList.size() + " hosts connected");
-                  //  } while (input.available() > 0);
+                    System.out.println(localName + " connecting to " + received.name + " over port " + received.port + " with address " + received.address);
+                    Socket connection2 = new Socket(received.address, received.port);
+                    if (connection2.isConnected()) {
+                        System.out.println(localName + " final connection to " + received.name + " succeeded");
+                    }
+                    //connection2.getInputStream().read(); //should block until DONEPING is received
+                    received.sock = new SocketHandler(connection2);
+                    hostList.add(received);
+                    connection.close();
+                    System.out.println(localName + " added one host. " + hostList.size() + " hosts connected");
+                    //  } while (input.available() > 0);
                 }
 
             } catch (IOException ex) {
@@ -93,12 +92,12 @@ public class MessagePasser {
                 Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        try {
-            Thread.sleep(5000);
-            System.out.println(localName+"'s TURN!!!!!");
-        } catch (InterruptedException ex) {
-            Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        /*try {
+         Thread.sleep(5000);
+         System.out.println(localName+"'s TURN!!!!!");
+         } catch (InterruptedException ex) {
+         Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
+         }*/
         //now reach out to remaining nodes
         //iterate through list again to connect to all machines
         for (Map<String, Object> key : config) {
@@ -132,7 +131,7 @@ public class MessagePasser {
                     hostList.add(host);
                     hostcounter++;
                     System.out.println(localName + " added one host. " + hostList.size() + " hosts connected");
-                    
+
                 } catch (IOException ex) {
                     Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -257,16 +256,21 @@ class SocketHandler implements Runnable {
     }
 
     public void run() {
-        Message received = null;
         try {
             input = new ObjectInputStream(sock.getInputStream());
-            received = (Message) input.readObject();
+            while (true) {
+                Message received = null;
+                received = (Message) input.readObject();
+                receiveQueue.add(received);
+            }
         } catch (IOException ex) {
+            System.out.println(ex.toString());
             Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ClassNotFoundException ex) {
+                        System.out.println(ex.toString());
+
             Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
-        receiveQueue.add(received);
     }
 
     public void start() {

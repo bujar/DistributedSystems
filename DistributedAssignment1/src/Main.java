@@ -1,4 +1,7 @@
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -30,13 +33,20 @@ class testNode implements Runnable {
 
     public void run() {
         msg = new MessagePasser(configfile, name);
-       /* if (name.equals("alice")) {
+        if (name.equals("alice")) {
             msg.send(new Message("bob", "MX", "bla"));
-            System.out.println(msg.receive().data);
+            //System.out.println(msg.receive().data);
         } else if (name.equals("bob")) {
             msg.send(new Message("alice", "MX", "bla"));
-            System.out.println(msg.receive().data);
-        }*/
+            //System.out.println(msg.receive().data);
+        }
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(testNode.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        System.out.println(msg.receive().data);
+        System.out.println(msg.receive().data);
 
     }
 
