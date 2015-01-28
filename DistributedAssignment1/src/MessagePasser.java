@@ -26,8 +26,8 @@ import org.yaml.snakeyaml.Yaml;
 public class MessagePasser {
     //done
 
-    public static ArrayList<Host> hostList = new ArrayList<Host>();
-    public static int seqNum;
+    public ArrayList<Host> hostList = new ArrayList<Host>();
+    public int seqNum;
     Queue<Message> recvDelayQueue;
     Queue<Message> sendDelayQueue;
 
@@ -43,6 +43,8 @@ public class MessagePasser {
         boolean myturn = false;
         int hostcounter = 1;
 
+        int listencounter = 0;
+        int totalnodes = 0;
         //iterate through config file to find own info
         for (Map<String, Object> key : config) {
             String name = (String) key.get("name");
@@ -51,9 +53,53 @@ public class MessagePasser {
                 int port = (Integer) key.get("port");
                 localport = Integer.valueOf(port);
                 localhost = new Host(name, null, ipAddr);
+                listencounter = totalnodes;
+            }
+            totalnodes++;
+        }
+        //listen first
+        if (listencounter > 0) {
+            try {
+                System.out.println(localName + " waiting for connection");
+                Socket connection = (new ServerSocket(localport)).accept();
+                                    ObjectInputStream input = new ObjectInputStream(connection.getInputStream());
+
+                while (hostList.size() < listencounter) {
+                    if (connection.isClosed()) {
+                        connection = (new ServerSocket(localport)).accept();
+                    }
+                    System.out.println(localName + " got a new connection");
+                  //  do {
+                        Host received = (Host) input.readObject();
+                        System.out.println(localName + " received object from " + received.name);
+
+                        System.out.println(localName + " connecting to " + received.name + " over port " + received.port + " with address " + received.address);
+                        Socket connection2 = new Socket(received.address, received.port);
+                        if (connection2.isConnected()) {
+                            System.out.println(localName + " final connection to " + received.name + " succeeded");
+                        }
+                        //connection2.getInputStream().read(); //should block until DONEPING is received
+                        received.sock = new SocketHandler(connection2);
+                        hostList.add(received);
+                        System.out.println(localName + " added one host. " + hostList.size() + " hosts connected");
+                  //  } while (input.available() > 0);
+                }
+
+            } catch (IOException ex) {
+                System.out.println(localName + " error listening " + ex.toString());
+                Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ClassNotFoundException ex) {
+                System.out.println(localName + " error listening " + ex.toString());
+                Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-
+        try {
+            Thread.sleep(5000);
+            System.out.println(localName+"'s TURN!!!!!");
+        } catch (InterruptedException ex) {
+            Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        //now reach out to remaining nodes
         //iterate through list again to connect to all machines
         for (Map<String, Object> key : config) {
             //is this me? if it is, go through rest of list and send my own Host object to every other person on list with diff connect port, wait for them to connect back to me, send ping to say I am done
@@ -66,53 +112,68 @@ public class MessagePasser {
                 String ipAddr = (String) key.get("ip");
                 int port = (Integer) key.get("port");
                 try {
+                    System.out.println(localName + " connecting to " + name);
                     Socket connection = new Socket(ipAddr, port);
+                    if (connection.isConnected()) {
+                        System.out.println(localName + " connection to " + name + " succeeded");
+                    }
                     localhost.port = localport + hostcounter;
                     ObjectOutputStream output = new ObjectOutputStream(connection.getOutputStream());
                     output.writeObject(localhost);
                     output.close();
                     connection.close();
-                    connection = (new ServerSocket(localport + hostcounter)).accept();
-                    Host host = new Host(name, new SocketHandler(connection), ipAddr);
+                    System.out.println(localName + " waiting for reconnect from " + name);
+
+                    Socket connection2 = (new ServerSocket(localport + hostcounter)).accept();
+                    if (connection2.isConnected()) {
+                        System.out.println(localName + " final connection to " + name + " succeeded");
+                    }
+                    Host host = new Host(name, new SocketHandler(connection2), ipAddr);
                     hostList.add(host);
                     hostcounter++;
+                    System.out.println(localName + " added one host. " + hostList.size() + " hosts connected");
+                    
                 } catch (IOException ex) {
                     Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
                 }
 
             } else if (!name.equals(localName)) {
-                try {
-                    System.out.println("Waiting for " + name);
-                    Socket connection = (new ServerSocket(localport)).accept();
-                    System.out.println("Got connection from " + name);
-                    ObjectInputStream input = new ObjectInputStream(connection.getInputStream());
-                    Host received = (Host) input.readObject();
-                    System.out.println("Received object " + received);
-                    input.close();
-                    connection.close();
-                    System.out.println("connecting to " + name + " over port " + received.port + "with address " + received.address);
-                    connection = new Socket(received.address, received.port);
-                    connection.getInputStream().read(); //should block until DONEPING is received
-                    received.sock = new SocketHandler(connection);
-                    hostList.add(received);
-                    System.out.println(hostList);
-                } catch (IOException ex) {
-                    Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (ClassNotFoundException ex) {
-                    Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                /* try {
+                 System.out.println(localName + " waiting for connection");
+                 Socket connection = (new ServerSocket(localport)).accept();
+                 System.out.println(localName + " got a new connection");
+                 ObjectInputStream input = new ObjectInputStream(connection.getInputStream());
+                 Host received = (Host) input.readObject();
+                 System.out.println(localName + " received object from " + received.name);
+                 input.close();
+                 connection.close();
+                 System.out.println(localName + " connecting to " + received.name + " over port " + received.port + " with address " + received.address);
+                 Socket connection2 = new Socket(received.address, received.port);
+                 if (connection2.isConnected()) {
+                 System.out.println(localName + " final connection to " + received.name + " succeeded");
+                 }
+                 connection2.getInputStream().read(); //should block until DONEPING is received
+                 received.sock = new SocketHandler(connection2);
+                 hostList.add(received);
+                 System.out.println(localName + " added one host. " + hostList.size() + " hosts connected");
+
+                 } catch (IOException ex) {
+                 Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
+                 } catch (ClassNotFoundException ex) {
+                 Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
+                 }*/
             }
-            System.out.println(hostList);
         }
+        System.out.println(localName + " done. " + hostList.size() + " hosts connected");
 
         //notify all other nodes that this one is done connecting to everyone
-        for (int i = 0; i < hostList.size(); i++) {
-            try {
-                hostList.get(i).sock.sock.getOutputStream().write(1);
-            } catch (IOException ex) {
-                Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
+        /*for (int i = 0; i < hostList.size(); i++) {
+         try {
+         hostList.get(i).sock.sock.getOutputStream().write(1);
+         } catch (IOException ex) {
+         Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex);
+         }
+         }*/
         for (int i = 0; i < hostList.size(); i++) {
             hostList.get(i).sock.start();
         }
@@ -207,9 +268,9 @@ class SocketHandler implements Runnable {
         }
         receiveQueue.add(received);
     }
-    
-    public void start(){
-        if(t == null){
+
+    public void start() {
+        if (t == null) {
             t = new Thread(this, "a");
             t.start();
         }
