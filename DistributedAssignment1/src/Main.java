@@ -31,6 +31,7 @@ public class Main {
             }else if(name.equals("daphne")){
                 daphne.msg.send(new Message(parse.next(),parse.next(),parse.next()));
             }
+            command = input.nextLine();
         }
     }
 }
