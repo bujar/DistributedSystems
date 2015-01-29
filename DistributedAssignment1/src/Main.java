@@ -35,13 +35,16 @@ class testNode implements Runnable {
         msg = new MessagePasser(configfile, name);
         if (name.equals("alice")) {
             msg.send(new Message("bob", "MX", "bla"));
-            msg.send(new Message("bob", "MX", "bla2"));
+//            msg.send(new Message("bob", "MX", "bla2"));
             msg.send(new Message("charlie", "MX", "blatocharlie"));
             msg.send(new Message("daphne", "MX", "blatodapne"));
             //System.out.println(msg.receive().data);
         } else if (name.equals("bob")) {
-            msg.send(new Message("alice", "MX", "bla"));
-            msg.send(new Message("charlie", "MX", "alltheblastocharliefrombob"));
+            msg.send(new Message("charlie", "Lookup", "alltheblastocharliefrombob"));
+            msg.send(new Message("charlie", "Lookup", "another message to charlie"));
+
+
+            msg.send(new Message("alice", "Ack", "blaaaaaaaaaaa"));
             //System.out.println(msg.receive().data);
         }
         try {
@@ -53,6 +56,14 @@ class testNode implements Runnable {
             Message m = msg.receive();
             if (m != null) {
                 System.out.println(name + " received: " + m.data);
+                if (m.dupe){
+                	System.out.println(name + " received: " + m.data);
+                }
+            }
+            Message delayed = null;
+            while (!MessagePasser.recvDelayQueue.isEmpty()){
+            	delayed = MessagePasser.recvDelayQueue.poll();
+            	System.out.println(delayed.data);
             }
             try {
                 Thread.sleep(1000);

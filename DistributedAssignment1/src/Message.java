@@ -17,6 +17,7 @@ public class Message implements Serializable {
         dest = newdest;
         kind = newkind;
         data = newdata;
+        dupe = false;
     }
 
     public void set_source(String newsource) {

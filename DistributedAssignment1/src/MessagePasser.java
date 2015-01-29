@@ -23,16 +23,16 @@ public class MessagePasser {
     public ArrayList<Rule> sendRules = new ArrayList<Rule>();
     public ArrayList<Rule> recvRules = new ArrayList<Rule>();
     public int seqNum;
-    ArrayList<Message> recvDelayQueue;
-    ArrayList<Message> sendDelayQueue;
+    public static LinkedList<Message> recvDelayQueue;
+    public LinkedList<Message> sendDelayQueue;
     public  static String configFile;
     public String localSource;
     public MessagePasser(String pathName, String localName) {
         seqNum = 0;
         configFile = pathName;
         localSource = localName;
-        sendDelayQueue = new ArrayList<Message>();
-        recvDelayQueue = new ArrayList<Message>();
+        sendDelayQueue = new LinkedList<Message>();
+        recvDelayQueue = new LinkedList<Message>();
         
         Map<String, ArrayList<Map<String, Object>>> data = getYamlData(pathName);
         ArrayList<Map<String, Object>> config = data.get("configuration");
@@ -228,6 +228,8 @@ public class MessagePasser {
 		seqNum++;
 		String src, dst, kind, action;
 		int seq;
+
+
 		System.out.println("Processing message from " +m.source +  " to " + m.dest + " " + m.kind + " " + m.sequenceNumber);
 		for (int i = 0; i < hostList.size(); i++) {
 			if (hostList.get(i).name.equals(m.dest)) {
@@ -248,6 +250,7 @@ public class MessagePasser {
 									}
 									else if (action.equals("delay")){
 										sendDelayQueue.add(m);
+										System.out.println("delayed message " + m.data);
 										System.out.println("delay----------------------------------------");
 										return;
 									}
@@ -263,6 +266,16 @@ public class MessagePasser {
 					} 
 				}
 				hostList.get(i).sock.send(m);
+				while (!sendDelayQueue.isEmpty()){
+					Message delayed = sendDelayQueue.poll();
+						for (int j = 0; j < hostList.size(); j++) {
+							if (hostList.get(j).name.equals(m.dest)) {
+						hostList.get(j).sock.send(delayed);
+							
+						}
+					}
+
+			}
 
 			}
 		}
@@ -314,7 +327,7 @@ public class MessagePasser {
 								}
 								else if (action.equals("duplicate")) {
 									System.out.println("duplicated-------------------------------");
-									//how to duplicate?
+									m.dupe = true;
 									return m;
 								}
 							}
