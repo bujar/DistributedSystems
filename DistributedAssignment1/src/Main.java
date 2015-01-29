@@ -1,4 +1,5 @@
 
+import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -15,7 +16,22 @@ public class Main {
         bob.start();
         charlie.start();
         daphne.start();
-
+        
+        Scanner input = new Scanner(System.in);
+        String command = input.nextLine();
+        while(true){
+            Scanner parse = new Scanner(command);
+            String name = parse.next();
+            if(name.equals("alice")){
+                alice.msg.send(new Message(parse.next(),parse.next(),parse.next()));
+            }else if(name.equals("bob")){
+                bob.msg.send(new Message(parse.next(),parse.next(),parse.next()));
+            }else if(name.equals("charlie")){
+                charlie.msg.send(new Message(parse.next(),parse.next(),parse.next()));
+            }else if(name.equals("daphne")){
+                daphne.msg.send(new Message(parse.next(),parse.next(),parse.next()));
+            }
+        }
     }
 }
 
@@ -33,7 +49,7 @@ class testNode implements Runnable {
 
     public void run() {
         msg = new MessagePasser(configfile, name);
-        if (name.equals("alice")) {
+        /*if (name.equals("alice")) {
             msg.send(new Message("bob", "MX", "bla"));
 //            msg.send(new Message("bob", "MX", "bla2"));
             msg.send(new Message("charlie", "MX", "blatocharlie"));
@@ -51,7 +67,7 @@ class testNode implements Runnable {
             Thread.sleep(1000);
         } catch (InterruptedException ex) {
             Logger.getLogger(testNode.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        }*/
         while (true) {
             Message m = msg.receive();
             if (m != null) {
