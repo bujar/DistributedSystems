@@ -257,6 +257,7 @@ public class MessagePasser {
 									else if (action.equals("duplicate")) {
 										System.out.println("duplicated-------------------------------");
 										hostList.get(i).sock.send(m);
+										m.dupe = true;
 										hostList.get(i).sock.send(m);
 										return;
 									}
@@ -320,7 +321,6 @@ public class MessagePasser {
 									return null;
 								}
 								else if (action.equals("delay")){
-									sendDelayQueue.add(m);
 									System.out.println("delay----------------------------------------");
 									recvDelayQueue.add(m);
 									return null;
@@ -328,6 +328,7 @@ public class MessagePasser {
 								else if (action.equals("duplicate")) {
 									System.out.println("duplicated-------------------------------");
 									m.dupe = true;
+									recvDelayQueue.add(m);
 									return m;
 								}
 							}

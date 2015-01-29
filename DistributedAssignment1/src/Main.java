@@ -56,9 +56,6 @@ class testNode implements Runnable {
             Message m = msg.receive();
             if (m != null) {
                 System.out.println(name + " received: " + m.data);
-                if (m.dupe){
-                	System.out.println(name + " received: " + m.data);
-                }
             }
             Message delayed = null;
             while (!MessagePasser.recvDelayQueue.isEmpty()){
