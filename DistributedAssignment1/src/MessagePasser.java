@@ -14,6 +14,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.yaml.snakeyaml.Yaml;
 
 public class MessagePasser {
@@ -27,6 +28,7 @@ public class MessagePasser {
     public LinkedList<Message> sendDelayQueue;
     public  static String configFile;
     public String localSource;
+    public boolean delayed = false;
     public MessagePasser(String pathName, String localName) {
         seqNum = 0;
         configFile = pathName;
@@ -323,6 +325,7 @@ public class MessagePasser {
 								else if (action.equals("delay")){
 									System.out.println("delay----------------------------------------");
 									recvDelayQueue.add(m);
+									delayed = true;
 									return null;
 								}
 								else if (action.equals("duplicate")) {
@@ -335,9 +338,17 @@ public class MessagePasser {
 						}
 					}
 				} 
+					delayed = false;
 					return m;
             }
         }
+
+		if (!delayed){
+			 Message delayed = null;
+	            
+	            	delayed = MessagePasser.recvDelayQueue.poll();
+	            	return delayed;				            
+		}
             return null;
         
     }
