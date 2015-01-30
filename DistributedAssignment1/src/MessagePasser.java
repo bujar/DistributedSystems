@@ -29,13 +29,15 @@ public class MessagePasser {
     public  static String configFile;
     public String localSource;
     public boolean delayed = false;
+    public long lastModified;
     public MessagePasser(String pathName, String localName) {
         seqNum = 0;
         configFile = pathName;
         localSource = localName;
         sendDelayQueue = new LinkedList<Message>();
         recvDelayQueue = new LinkedList<Message>();
-        
+        File file = new File(pathName);
+        lastModified = file.lastModified();
         Map<String, ArrayList<Map<String, Object>>> data = getYamlData(pathName);
         ArrayList<Map<String, Object>> config = data.get("configuration");
 
@@ -207,6 +209,36 @@ public class MessagePasser {
         }
     }
 
+    public void checkForUpdate() {
+        //parse rules
+    	sendRules.clear();
+    	recvRules.clear();
+    	Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
+		ArrayList<Map<String, Object>> sendRule = data.get("sendRules");
+		for (Map<String, Object> key : sendRule) {
+			String a = (String) key.get("action");
+			String src = (String) key.get("src");
+			String dst = (String) key.get("dest");
+			String kind = (String) key.get("kind");
+			int seq = -1;
+			if (key.get("seqNum") != null)
+				seq = (Integer) key.get("seqNum");
+			Rule rule = new Rule(a, src, dst, kind, seq);
+			sendRules.add(rule);
+		}
+		ArrayList<Map<String, Object>> recvRule = data.get("receiveRules");
+		for (Map<String, Object> key : recvRule) {
+			String a = (String) key.get("action");
+			String src = (String) key.get("src");
+			String dst = (String) key.get("dest");
+			String kind = (String) key.get("kind");
+			int seq = -1;
+			if (key.get("seqNum") != null)
+				seq = (Integer) key.get("seqNum");
+			Rule rule = new Rule(a, src, dst, kind, seq);
+			recvRules.add(rule);
+		}
+    }
     public Map<String, ArrayList<Map<String, Object>>> getYamlData(String pathName) {
         InputStream input = null;
         try {
@@ -224,14 +256,17 @@ public class MessagePasser {
 
 	public void send(Message m) {
 		// set message contents
-
+		File config = new File(configFile);
+		if (config.lastModified() != lastModified){
+			checkForUpdate();
+		}
 		m.set_source(localSource);
 		m.set_seqNum(seqNum);
 		seqNum++;
 		String src, dst, kind, action;
 		int seq;
 
-
+		
 		System.out.println("Processing message from " +m.source +  " to " + m.dest + " " + m.kind + " " + m.sequenceNumber);
 		for (int i = 0; i < hostList.size(); i++) {
 			if (hostList.get(i).name.equals(m.dest)) {
@@ -300,6 +335,10 @@ public class MessagePasser {
         int i = 0;
         String src, dst, kind, action;
 		int seq;
+		File config = new File(configFile);
+		if (config.lastModified() != lastModified){
+			checkForUpdate();
+		}
         while (i < hostList.size() && hostList.get(i).sock.receiveQueue.isEmpty()) {
             i++;
         }
