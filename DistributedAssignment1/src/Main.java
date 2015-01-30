@@ -8,12 +8,12 @@ public class Main {
     public static void main(String[] args) {
 
         //will change to retrieving paramaters from user args
-        testNode alice = new testNode("configuration.yml", "alice");
-        testNode bob = new testNode("configuration.yml", "bob");
+        //testNode alice = new testNode("configuration.yml", "alice");
+        //testNode bob = new testNode("configuration.yml", "bob");
         testNode charlie = new testNode("configuration.yml", "charlie");
         testNode daphne = new testNode("configuration.yml", "daphne");
-        alice.start();
-        bob.start();
+        //alice.start();
+        //bob.start();
         charlie.start();
         daphne.start();
         
@@ -23,9 +23,9 @@ public class Main {
             Scanner parse = new Scanner(command);
             String name = parse.next();
             if(name.equals("alice")){
-                alice.msg.send(new Message(parse.next(),parse.next(),parse.next()));
+          //      alice.msg.send(new Message(parse.next(),parse.next(),parse.next()));
             }else if(name.equals("bob")){
-                bob.msg.send(new Message(parse.next(),parse.next(),parse.next()));
+            //    bob.msg.send(new Message(parse.next(),parse.next(),parse.next()));
             }else if(name.equals("charlie")){
                 charlie.msg.send(new Message(parse.next(),parse.next(),parse.next()));
             }else if(name.equals("daphne")){

@@ -7,27 +7,27 @@
 # The local node’s name is included in this list
 configuration :
   - name : alice
-    ip : 127.0.0.1
+    ip : 128.237.173.159
     port : 12344 # This is the incoming port on which MP will listen
                   # May be changed for further communication as usual
   - name : bob
-    ip : 127.0.0.1
+    ip : 128.237.173.159
     port : 14255
 
   - name : charlie
-    ip : 127.0.0.1
+    ip : 128.237.170.225
     port : 15455
 
   - name : daphne
-    ip : 127.0.0.1
+    ip : 128.237.170.225
     port : 13572
 
 sendRules :
   - action : drop # Ack message number 4 from bob to alice will not be sent
-    src : bob
+    src : charlie
     dest : alice
     kind : Ack
-    seqNum : 4
+
   - action : delay # Every Lookup message in the system will be delayed
     kind : Lookup
   
