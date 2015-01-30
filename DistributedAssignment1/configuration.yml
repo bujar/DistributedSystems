@@ -27,11 +27,10 @@ sendRules :
     src : charlie
     dest : alice
     kind : Ack
-
-  - action : delay # Every Lookup message in the system will be delayed
-    kind : Lookup
+  - action : duplicate # Every Lookup message in the system will be delayed
+    kind : Ack
   
 receiveRules :
-  - action : duplicate # 3rd message from Charlie that anyone
-    src : charlie # receives will be duplicated
-    seqNum : 3
+  - action : delay # 3rd message from Charlie that anyone
+    dest : charlie # receives will be duplicated
+    src: alice

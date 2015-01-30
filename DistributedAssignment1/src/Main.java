@@ -74,11 +74,6 @@ class testNode implements Runnable {
             if (m != null) {
                 System.out.println(name + " received: " + m.data);
             }
-            Message delayed = null;
-            while (!MessagePasser.recvDelayQueue.isEmpty()){
-            	delayed = MessagePasser.recvDelayQueue.poll();
-            	System.out.println(delayed.data);
-            }
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ex) {
