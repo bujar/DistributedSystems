@@ -70,10 +70,13 @@ public class MessagePasser {
 			String src = (String) key.get("src");
 			String dst = (String) key.get("dest");
 			String kind = (String) key.get("kind");
+			boolean duplicate = false;
+			if (key.get("duplicate") != null)
+				duplicate = (Boolean) key.get("duplicate");
 			int seq = -1;
 			if (key.get("seqNum") != null)
 				seq = (Integer) key.get("seqNum");
-			Rule rule = new Rule(a, src, dst, kind, seq);
+			Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
 			sendRules.add(rule);
 		}
 		ArrayList<Map<String, Object>> recvRule = data.get("receiveRules");
@@ -82,10 +85,13 @@ public class MessagePasser {
 			String src = (String) key.get("src");
 			String dst = (String) key.get("dest");
 			String kind = (String) key.get("kind");
+			boolean duplicate = false;
+			if (key.get("duplicate") != null)
+				duplicate = (Boolean) key.get("duplicate");
 			int seq = -1;
 			if (key.get("seqNum") != null)
 				seq = (Integer) key.get("seqNum");
-			Rule rule = new Rule(a, src, dst, kind, seq);
+			Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
 			recvRules.add(rule);
 		}
 		
@@ -183,10 +189,13 @@ public class MessagePasser {
 			String src = (String) key.get("src");
 			String dst = (String) key.get("dest");
 			String kind = (String) key.get("kind");
+			boolean duplicate = false;
+			if (key.get("duplicate") != null)
+				duplicate = (Boolean) key.get("duplicate");
 			int seq = -1;
 			if (key.get("seqNum") != null)
 				seq = (Integer) key.get("seqNum");
-			Rule rule = new Rule(a, src, dst, kind, seq);
+			Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
 			sendRules.add(rule);
 		}
 		ArrayList<Map<String, Object>> recvRule = data.get("receiveRules");
@@ -195,10 +204,13 @@ public class MessagePasser {
 			String src = (String) key.get("src");
 			String dst = (String) key.get("dest");
 			String kind = (String) key.get("kind");
+			boolean duplicate = false;
+			if (key.get("duplicate") != null)
+				duplicate = (Boolean) key.get("duplicate");
 			int seq = -1;
 			if (key.get("seqNum") != null)
 				seq = (Integer) key.get("seqNum");
-			Rule rule = new Rule(a, src, dst, kind, seq);
+			Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
 			recvRules.add(rule);
 		}
     }
@@ -225,6 +237,7 @@ public class MessagePasser {
 		}
 		m.set_source(localSource);
 		m.set_seqNum(seqNum);
+		m.set_duplicate(false);
 		seqNum++;
 		String src, dst, kind, action;
 		int seq;
@@ -257,8 +270,11 @@ public class MessagePasser {
 									else if (action.equals("duplicate")) {
 										System.out.println("duplicated-------------------------------");
 										hostList.get(i).sock.send(m);
-										m.dupe = true;
-										hostList.get(i).sock.send(m);
+										Message copy = new Message(m.dest, m.kind, m.data);
+										copy.set_source(localSource);
+										copy.set_seqNum(seqNum-1);
+										copy.set_duplicate(true);
+										hostList.get(i).sock.send(copy);
 										return;
 									}
 								}
@@ -297,6 +313,7 @@ public class MessagePasser {
     public Message receive() {
         int i = 0;
         String src, dst, kind, action;
+        boolean duplicate;
 		int seq;
 		File config = new File(configFile);
 		if (config.lastModified() != lastModified){
@@ -308,7 +325,7 @@ public class MessagePasser {
         if (i < hostList.size()) {
         	
             Message m =  hostList.get(i).sock.receiveQueue.poll();
-//    		System.out.println("Receiving message from " +m.source +  " to " + m.dest + " " + m.kind + " " + m.sequenceNumber);
+    		System.out.println("Receiving message from " +m.source +  " to " + m.dest + " " + m.kind + " with sequenceNum: " + m.sequenceNumber);
 
             for (Rule rule : recvRules) {
 				src = rule.src;
@@ -316,28 +333,32 @@ public class MessagePasser {
 				kind = rule.kind;
 				action = rule.action;
 				seq = rule.seq;
+				duplicate = rule.duplicate;
+
 				if (m.source.equals(src) || src == null) {
 					if (m.dest.equals(dst) || dst == null) {
 						if (m.kind.equals(kind) || kind == null) {
 							if (m.sequenceNumber == seq || seq == -1) {
-								if (action.equals("drop")){
-									System.out.println("dropped--------------------------------");
-									return receive();
+								if (m.getDupe() != null && m.getDupe() == duplicate){
+									if (action.equals("drop")){
+										System.out.println("dropped--------------------------------");
+										return receive();
+									}
+									else if (action.equals("delay")){
+										System.out.println("delay----------------------------------------");
+										recvDelayQueue.add(m);
+										delayed = true;
+										return receive();
+									}
+									else if (action.equals("duplicate")) {
+										System.out.println("duplicated-------------------------------");
+										m.set_duplicate(true);
+										recvDelayQueue.add(m);
+										delayed = false;
+										return m;
+									}
+	
 								}
-								else if (action.equals("delay")){
-									System.out.println("delay----------------------------------------");
-									recvDelayQueue.add(m);
-									delayed = true;
-									return receive();
-								}
-								else if (action.equals("duplicate")) {
-									System.out.println("duplicated-------------------------------");
-									m.dupe = true;
-									recvDelayQueue.add(m);
-									delayed = false;
-									return m;
-								}
-
 							}
 						}
 					}
@@ -434,13 +455,15 @@ class Rule {
 	public String src = null;
 	public String dst = null;
 	public String kind = null;
+	public Boolean duplicate = null;
 	public int seq = -1;
 	
-	public Rule(String action, String src, String dst, String kind, int seq){
+	public Rule(String action, String src, String dst, String kind, int seq, boolean duplicate){
 		this.action = action;
 		this.src = src;
 		this.dst = dst;
 		this.kind = kind;
 		this.seq = seq;
+		this.duplicate = duplicate;
 	}
 }

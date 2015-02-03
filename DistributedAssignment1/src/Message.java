@@ -17,7 +17,6 @@ public class Message implements Serializable {
         dest = newdest;
         kind = newkind;
         data = newdata;
-        dupe = false;
     }
 
     public void set_source(String newsource) {
@@ -28,9 +27,14 @@ public class Message implements Serializable {
         sequenceNumber = newsequenceNumber;
     }
 
-    public void set_duplicate(Boolean newdupe) {
-        dupe = newdupe;
-    }
+	public Boolean getDupe() {
+		return dupe;
+	}
+
+	public void set_duplicate(Boolean d) {
+		dupe = d;
+	}
+
 
     /*
      * SendMessage Implementation
