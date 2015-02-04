@@ -7,8 +7,9 @@
  *
  * @author Keane
  */
+import java.io.Serializable;
 
-public class TimeStamp {
+public class TimeStamp implements Serializable{
 
     int[] value;
     public TimeStamp(String type, int vectorlength) {
