@@ -10,8 +10,8 @@ public class Main {
         //will change to retrieving paramaters from user args
         //testNode alice = new testNode("configuration.yml", "alice");
         //testNode bob = new testNode("configuration.yml", "bob");
-        testNode charlie = new testNode("configuration.yml", "charlie");
-        testNode daphne = new testNode("configuration.yml", "daphne");
+        testNode charlie = new testNode("configuration.yml", "charlie", "vector");
+        testNode daphne = new testNode("configuration.yml", "daphne", "vector");
         //alice.start();
         //bob.start();
         charlie.start();
@@ -41,15 +41,17 @@ class testNode implements Runnable {
     public MessagePasser msg;
     public String configfile;
     public String name;
+    public String clockType;
     private Thread t;
 
-    public testNode(String newconfigfile, String newname) {
+    public testNode(String newconfigfile, String newname, String newclockType) {
         configfile = newconfigfile;
         name = newname;
+        clockType = newclockType;
     }
 
     public void run() {
-        msg = new MessagePasser(configfile, name);
+        msg = new MessagePasser(configfile, name, clockType);
         /*if (name.equals("alice")) {
             msg.send(new Message("bob", "MX", "bla"));
 //            msg.send(new Message("bob", "MX", "bla2"));

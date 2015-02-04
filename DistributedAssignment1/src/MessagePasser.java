@@ -33,7 +33,7 @@ public class MessagePasser {
     public long lastModified;
     public ClockService clock;
 
-    public MessagePasser(String pathName, String localName, String clockType) throws Exception {
+    public MessagePasser(String pathName, String localName, String clockType) {
         delayed = false;
         seqNum = 0;
         configFile = pathName;
@@ -71,7 +71,7 @@ public class MessagePasser {
         } else if (clockType.equals("vector")) {
             clock = new VectorClock(totalnodes, listencounter);
         } else {
-            throw new Exception("clock type selected not valid");
+            System.out.println(clockType+" not a valid Clock option.");
         }
 
         //parse rules
