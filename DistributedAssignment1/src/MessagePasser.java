@@ -27,13 +27,14 @@ public class MessagePasser {
     public int seqNum;
     public LinkedList<TimeStampedMessage> recvDelayQueue;
     public LinkedList<Message> sendDelayQueue;
-    public  static String configFile;
+    public static String configFile;
     public String localSource;
     public boolean delayed;
     public long lastModified;
     public ClockService clock;
+
     public MessagePasser(String pathName, String localName, String clockType) throws Exception {
-    	delayed = false;
+        delayed = false;
         seqNum = 0;
         configFile = pathName;
         localSource = localName;
@@ -44,8 +45,6 @@ public class MessagePasser {
         Map<String, ArrayList<Map<String, Object>>> data = getYamlData(pathName);
         ArrayList<Map<String, Object>> config = data.get("configuration");
 
-        
-        
         Integer localport = 0;
         Host localhost = null;
         boolean myturn = false;
@@ -65,48 +64,52 @@ public class MessagePasser {
             }
             totalnodes++;
         }
-        
+
         //intiialize clock
-        if(clockType.equals("logical")){
+        if (clockType.equals("logical")) {
             clock = new LogicalClock();
-        }else if(clockType.equals("vector")){
+        } else if (clockType.equals("vector")) {
             clock = new VectorClock(totalnodes, listencounter);
-        }else{
+        } else {
             throw new Exception("clock type selected not valid");
         }
-        
+
         //parse rules
-		ArrayList<Map<String, Object>> sendRule = data.get("sendRules");
-		for (Map<String, Object> key : sendRule) {
-			String a = (String) key.get("action");
-			String src = (String) key.get("src");
-			String dst = (String) key.get("dest");
-			String kind = (String) key.get("kind");
-			boolean duplicate = false;
-			if (key.get("duplicate") != null)
-				duplicate = (Boolean) key.get("duplicate");
-			int seq = -1;
-			if (key.get("seqNum") != null)
-				seq = (Integer) key.get("seqNum");
-			Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
-			sendRules.add(rule);
-		}
-		ArrayList<Map<String, Object>> recvRule = data.get("receiveRules");
-		for (Map<String, Object> key : recvRule) {
-			String a = (String) key.get("action");
-			String src = (String) key.get("src");
-			String dst = (String) key.get("dest");
-			String kind = (String) key.get("kind");
-			boolean duplicate = false;
-			if (key.get("duplicate") != null)
-				duplicate = (Boolean) key.get("duplicate");
-			int seq = -1;
-			if (key.get("seqNum") != null)
-				seq = (Integer) key.get("seqNum");
-			Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
-			recvRules.add(rule);
-		}
-		
+        ArrayList<Map<String, Object>> sendRule = data.get("sendRules");
+        for (Map<String, Object> key : sendRule) {
+            String a = (String) key.get("action");
+            String src = (String) key.get("src");
+            String dst = (String) key.get("dest");
+            String kind = (String) key.get("kind");
+            boolean duplicate = false;
+            if (key.get("duplicate") != null) {
+                duplicate = (Boolean) key.get("duplicate");
+            }
+            int seq = -1;
+            if (key.get("seqNum") != null) {
+                seq = (Integer) key.get("seqNum");
+            }
+            Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
+            sendRules.add(rule);
+        }
+        ArrayList<Map<String, Object>> recvRule = data.get("receiveRules");
+        for (Map<String, Object> key : recvRule) {
+            String a = (String) key.get("action");
+            String src = (String) key.get("src");
+            String dst = (String) key.get("dest");
+            String kind = (String) key.get("kind");
+            boolean duplicate = false;
+            if (key.get("duplicate") != null) {
+                duplicate = (Boolean) key.get("duplicate");
+            }
+            int seq = -1;
+            if (key.get("seqNum") != null) {
+                seq = (Integer) key.get("seqNum");
+            }
+            Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
+            recvRules.add(rule);
+        }
+
         //listen first
         if (listencounter > 0) {
             try {
@@ -127,7 +130,7 @@ public class MessagePasser {
 //                        System.out.println(localName + " final connection to " + received.name + " succeeded");
                     }
                     //connection2.getInputStream().read(); //should block until DONEPING is received
-                    received.sock = new SocketHandler(connection2);
+                    received.sock = new SocketHandler(connection2, clock);
                     hostList.add(received);
                     connection.close();
 //                    System.out.println(localName + " added one host. " + hostList.size() + " hosts connected");
@@ -170,9 +173,9 @@ public class MessagePasser {
 
                     Socket connection2 = (new ServerSocket(localport + hostcounter)).accept();
                     if (connection2.isConnected()) {
- //                       System.out.println(localName + " final connection to " + name + " succeeded");
+                        //                       System.out.println(localName + " final connection to " + name + " succeeded");
                     }
-                    Host host = new Host(name, new SocketHandler(connection2), ipAddr);
+                    Host host = new Host(name, new SocketHandler(connection2, clock), ipAddr);
                     hostList.add(host);
                     hostcounter++;
 //                    System.out.println(localName + " added one host. " + hostList.size() + " hosts connected");
@@ -192,40 +195,45 @@ public class MessagePasser {
 
     public void checkForUpdate() {
         //parse rules
-    	sendRules.clear();
-    	recvRules.clear();
-    	Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
-		ArrayList<Map<String, Object>> sendRule = data.get("sendRules");
-		for (Map<String, Object> key : sendRule) {
-			String a = (String) key.get("action");
-			String src = (String) key.get("src");
-			String dst = (String) key.get("dest");
-			String kind = (String) key.get("kind");
-			boolean duplicate = false;
-			if (key.get("duplicate") != null)
-				duplicate = (Boolean) key.get("duplicate");
-			int seq = -1;
-			if (key.get("seqNum") != null)
-				seq = (Integer) key.get("seqNum");
-			Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
-			sendRules.add(rule);
-		}
-		ArrayList<Map<String, Object>> recvRule = data.get("receiveRules");
-		for (Map<String, Object> key : recvRule) {
-			String a = (String) key.get("action");
-			String src = (String) key.get("src");
-			String dst = (String) key.get("dest");
-			String kind = (String) key.get("kind");
-			boolean duplicate = false;
-			if (key.get("duplicate") != null)
-				duplicate = (Boolean) key.get("duplicate");
-			int seq = -1;
-			if (key.get("seqNum") != null)
-				seq = (Integer) key.get("seqNum");
-			Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
-			recvRules.add(rule);
-		}
+        sendRules.clear();
+        recvRules.clear();
+        Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
+        ArrayList<Map<String, Object>> sendRule = data.get("sendRules");
+        for (Map<String, Object> key : sendRule) {
+            String a = (String) key.get("action");
+            String src = (String) key.get("src");
+            String dst = (String) key.get("dest");
+            String kind = (String) key.get("kind");
+            boolean duplicate = false;
+            if (key.get("duplicate") != null) {
+                duplicate = (Boolean) key.get("duplicate");
+            }
+            int seq = -1;
+            if (key.get("seqNum") != null) {
+                seq = (Integer) key.get("seqNum");
+            }
+            Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
+            sendRules.add(rule);
+        }
+        ArrayList<Map<String, Object>> recvRule = data.get("receiveRules");
+        for (Map<String, Object> key : recvRule) {
+            String a = (String) key.get("action");
+            String src = (String) key.get("src");
+            String dst = (String) key.get("dest");
+            String kind = (String) key.get("kind");
+            boolean duplicate = false;
+            if (key.get("duplicate") != null) {
+                duplicate = (Boolean) key.get("duplicate");
+            }
+            int seq = -1;
+            if (key.get("seqNum") != null) {
+                seq = (Integer) key.get("seqNum");
+            }
+            Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
+            recvRules.add(rule);
+        }
     }
+
     public Map<String, ArrayList<Map<String, Object>>> getYamlData(String pathName) {
         InputStream input = null;
         try {
@@ -241,75 +249,72 @@ public class MessagePasser {
         return configData;
     }
 
-	public void send(Message m) {
-		// set message contents
-		File config = new File(configFile);
-		if (config.lastModified() != lastModified){
-			checkForUpdate();
-		}
-		m.set_source(localSource);
-		m.set_seqNum(seqNum);
-		m.set_duplicate(false);
-		seqNum++;
-		String src, dst, kind, action;
-		int seq;
+    public void send(Message m) {
+        // set message contents
+        File config = new File(configFile);
+        if (config.lastModified() != lastModified) {
+            checkForUpdate();
+        }
+        m.set_source(localSource);
+        m.set_seqNum(seqNum);
+        m.set_duplicate(false);
+        seqNum++;
+        String src, dst, kind, action;
+        int seq;
 
-		
 //		System.out.println("Processing message from " +m.source +  " to " + m.dest + " " + m.kind + " " + m.sequenceNumber);
-		for (int i = 0; i < hostList.size(); i++) {
-			if (hostList.get(i).name.equals(m.dest)) {
+        for (int i = 0; i < hostList.size(); i++) {
+            if (hostList.get(i).name.equals(m.dest)) {
 
-				for (Rule rule : sendRules) {
-					src = rule.src;
-					dst = rule.dst;
-					kind = rule.kind;
-					action = rule.action;
-					seq = rule.seq;
-					if (m.source.equals(src) || src == null) {
-						if (m.dest.equals(dst) || dst == null) {
-							if (m.kind.equals(kind) || kind == null) {
-								if (m.sequenceNumber == seq || seq == -1) {
-									if (action.equals("drop")){
-										System.out.println("dropped--------------------------------");
-										return;
-									}
-									else if (action.equals("delay")){
-										sendDelayQueue.add(m);
+                for (Rule rule : sendRules) {
+                    src = rule.src;
+                    dst = rule.dst;
+                    kind = rule.kind;
+                    action = rule.action;
+                    seq = rule.seq;
+                    if (m.source.equals(src) || src == null) {
+                        if (m.dest.equals(dst) || dst == null) {
+                            if (m.kind.equals(kind) || kind == null) {
+                                if (m.sequenceNumber == seq || seq == -1) {
+                                    if (action.equals("drop")) {
+                                        System.out.println("dropped--------------------------------");
+                                        return;
+                                    } else if (action.equals("delay")) {
+                                        sendDelayQueue.add(m);
 //										System.out.println("delayed message " + m.data);
-										System.out.println("delay----------------------------------------");
-										return;
-									}
-									else if (action.equals("duplicate")) {
-										System.out.println("duplicated-------------------------------");
-										hostList.get(i).sock.send(new TimeStampedMessage(m, clock.getTimestamp()));
-										Message copy = new Message(m.dest, m.kind, m.data);
-										copy.set_source(localSource);
-										copy.set_seqNum(seqNum-1);
-										copy.set_duplicate(true);
-										hostList.get(i).sock.send(new TimeStampedMessage(copy, clock.getTimestamp()));
-										return;
-									}
-								}
-							}
-						}
-					} 
-				}
-				hostList.get(i).sock.send(new TimeStampedMessage(m, clock.getTimestamp()));
-				while (!sendDelayQueue.isEmpty()){
-					Message delayedMessage = sendDelayQueue.poll();
-						for (int j = 0; j < hostList.size(); j++) {
-							if (hostList.get(j).name.equals(m.dest)) {
-                                                            hostList.get(j).sock.send(new TimeStampedMessage(delayedMessage,clock.getTimestamp()));
-							
-						}
-					}
+                                        System.out.println("delay----------------------------------------");
+                                        return;
+                                    } else if (action.equals("duplicate")) {
+                                        System.out.println("duplicated-------------------------------");
+                                        hostList.get(i).sock.send(new TimeStampedMessage(m, clock.getTimestamp()));
+                                        Message copy = new Message(m.dest, m.kind, m.data);
+                                        copy.set_source(localSource);
+                                        copy.set_seqNum(seqNum - 1);
+                                        copy.set_duplicate(true);
+                                        hostList.get(i).sock.send(new TimeStampedMessage(copy, clock.getTimestamp()));
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                hostList.get(i).sock.send(new TimeStampedMessage(m, clock.getTimestamp()));
+                while (!sendDelayQueue.isEmpty()) {
+                    Message delayedMessage = sendDelayQueue.poll();
+                    for (int j = 0; j < hostList.size(); j++) {
+                        if (hostList.get(j).name.equals(m.dest)) {
+                            hostList.get(j).sock.send(new TimeStampedMessage(delayedMessage, clock.getTimestamp()));
 
-			}
+                        }
+                    }
 
-			}
-		}
-	}
-	
+                }
+
+            }
+        }
+    }
+
 //    public TimeStampedMessage receive() {
 //        int i = 0;
 //        while (i < hostList.size() && hostList.get(i).sock.receiveQueue.isEmpty()) {
@@ -321,102 +326,99 @@ public class MessagePasser {
 //            return null;
 //        }
 //    }
-
-    public Message receive(){
+    public Message receive() {
         return receiveWithTimeStamp().getMessage();
     }
-        
+
     public TimeStampedMessage receiveWithTimeStamp() {
         int i = 0;
         String src, dst, kind, action;
         boolean duplicate;
-		int seq;
-		File config = new File(configFile);
-		if (config.lastModified() != lastModified){
-			checkForUpdate();
-		}
+        int seq;
+        File config = new File(configFile);
+        if (config.lastModified() != lastModified) {
+            checkForUpdate();
+        }
         while (i < hostList.size() && hostList.get(i).sock.receiveQueue.isEmpty()) {
             i++;
         }
         if (i < hostList.size()) {
-        	
-            TimeStampedMessage m =  hostList.get(i).sock.receiveQueue.poll();
-    		System.out.println("Receiving message from " +m.source +  " to " + m.dest + " " + m.kind + " with sequenceNum: " + m.sequenceNumber);
+
+            TimeStampedMessage m = hostList.get(i).sock.receiveQueue.poll();
+            System.out.println("DEBUG: Receiving message from " + m.source + " to " + m.dest + " " + m.kind + " with sequenceNum: " + m.sequenceNumber);
 
             for (Rule rule : recvRules) {
-				src = rule.src;
-				dst = rule.dst;
-				kind = rule.kind;
-				action = rule.action;
-				seq = rule.seq;
-				duplicate = rule.duplicate;
+                src = rule.src;
+                dst = rule.dst;
+                kind = rule.kind;
+                action = rule.action;
+                seq = rule.seq;
+                duplicate = rule.duplicate;
 
-				if (m.source.equals(src) || src == null) {
-					if (m.dest.equals(dst) || dst == null) {
-						if (m.kind.equals(kind) || kind == null) {
-							if (m.sequenceNumber == seq || seq == -1) {
-								if (m.getDupe() != null && m.getDupe() == duplicate){
-									if (action.equals("drop")){
-										System.out.println("dropped--------------------------------");
-										return receiveWithTimeStamp();
-									}
-									else if (action.equals("delay")){
-										System.out.println("delay----------------------------------------");
-										recvDelayQueue.add(m);
-										delayed = true;
-										return receiveWithTimeStamp();
-									}
-									else if (action.equals("duplicate")) {
-										System.out.println("duplicated-------------------------------");
-										m.set_duplicate(true);
-										recvDelayQueue.add(m);
-										delayed = false;
-										return m;
-									}
-	
-								}
-							}
-						}
-					}
-				} 
-					delayed = false;
-					return m;
+                if (m.source.equals(src) || src == null) {
+                    if (m.dest.equals(dst) || dst == null) {
+                        if (m.kind.equals(kind) || kind == null) {
+                            if (m.sequenceNumber == seq || seq == -1) {
+                                if (m.getDupe() != null && m.getDupe() == duplicate) {
+                                    if (action.equals("drop")) {
+                                        System.out.println("dropped--------------------------------");
+                                        return receiveWithTimeStamp();
+                                    } else if (action.equals("delay")) {
+                                        System.out.println("delay----------------------------------------");
+                                        recvDelayQueue.add(m);
+                                        delayed = true;
+                                        return receiveWithTimeStamp();
+                                    } else if (action.equals("duplicate")) {
+                                        System.out.println("duplicated-------------------------------");
+                                        m.set_duplicate(true);
+                                        recvDelayQueue.add(m);
+                                        delayed = false;
+                                        return m;
+                                    }
+
+                                }
+                            }
+                        }
+                    }
+                }
+                delayed = false;
+                return m;
             }
         }
 
-		if (delayed == false){
-			TimeStampedMessage d = null;
-	            	d = recvDelayQueue.poll();
-	            	return d;				            
-		}
-            return null;
-        
+        if (delayed == false) {
+            TimeStampedMessage d = null;
+            d = recvDelayQueue.poll();
+            return d;
+        }
+        return null;
+
     }
 }
 
 class SocketHandler implements Runnable {
 
-	public Socket sock;
+    public Socket sock;
     public LinkedList<TimeStampedMessage> receiveQueue;
     private Thread t;
     private ObjectOutputStream output = null;
     private ObjectInputStream input = null;
+    ClockService clock;
 
-    public SocketHandler(Socket newsock) {
+    public SocketHandler(Socket newsock, ClockService newclock) {
         sock = newsock;
-            try {
-                output = new ObjectOutputStream(sock.getOutputStream());
-                input = new ObjectInputStream(sock.getInputStream());
-            } catch (IOException ex) {
-                Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        
+        clock = newclock;
+        try {
+            output = new ObjectOutputStream(sock.getOutputStream());
+            input = new ObjectInputStream(sock.getInputStream());
+        } catch (IOException ex) {
+            Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
         receiveQueue = new LinkedList<TimeStampedMessage>();
     }
 
     public void send(TimeStampedMessage m) {
         try {
-            
             output.writeObject(m);
         } catch (IOException ex) {
             Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
@@ -425,17 +427,18 @@ class SocketHandler implements Runnable {
 
     public void run() {
         try {
-            
+
             while (true) {
                 TimeStampedMessage received = null;
                 received = (TimeStampedMessage) input.readObject();
+                clock.updateTimeStamp(received.stamp);
                 receiveQueue.add(received);
             }
         } catch (IOException ex) {
             System.out.println(ex.toString());
             Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ClassNotFoundException ex) {
-                        System.out.println(ex.toString());
+            System.out.println(ex.toString());
 
             Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -463,25 +466,25 @@ class Host implements Serializable {
         address = newaddress;
     }
 
-
-
 }
+
 class Rule {
-	public String action = null;
-	public String src = null;
-	public String dst = null;
-	public String kind = null;
-	public Boolean duplicate = null;
-	public int seq = -1;
-	
-	public Rule(String action, String src, String dst, String kind, int seq, boolean duplicate){
-		this.action = action;
-		this.src = src;
-		this.dst = dst;
-		this.kind = kind;
-		this.seq = seq;
-		this.duplicate = duplicate;
-	}
+
+    public String action = null;
+    public String src = null;
+    public String dst = null;
+    public String kind = null;
+    public Boolean duplicate = null;
+    public int seq = -1;
+
+    public Rule(String action, String src, String dst, String kind, int seq, boolean duplicate) {
+        this.action = action;
+        this.src = src;
+        this.dst = dst;
+        this.kind = kind;
+        this.seq = seq;
+        this.duplicate = duplicate;
+    }
 }
 
 abstract class ClockService {
