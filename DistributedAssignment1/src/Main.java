@@ -8,28 +8,28 @@ public class Main {
     public static void main(String[] args) {
 
         //will change to retrieving paramaters from user args
-        //testNode alice = new testNode("configuration.yml", "alice");
-        //testNode bob = new testNode("configuration.yml", "bob");
+        testNode alice = new testNode("configuration.yml", "alice", "vector");
+        testNode bob = new testNode("configuration.yml", "bob", "vector");
         testNode charlie = new testNode("configuration.yml", "charlie", "vector");
         testNode daphne = new testNode("configuration.yml", "daphne", "vector");
-        //alice.start();
-        //bob.start();
+        alice.start();
+        bob.start();
         charlie.start();
         daphne.start();
-        
+
         Scanner input = new Scanner(System.in);
         String command = input.nextLine();
-        while(true){
+        while (true) {
             Scanner parse = new Scanner(command);
             String name = parse.next();
-            if(name.equals("alice")){
-          //      alice.msg.send(new Message(parse.next(),parse.next(),parse.next()));
-            }else if(name.equals("bob")){
-            //    bob.msg.send(new Message(parse.next(),parse.next(),parse.next()));
-            }else if(name.equals("charlie")){
-                charlie.msg.send(new Message(parse.next(),parse.next(),parse.next()));
-            }else if(name.equals("daphne")){
-                daphne.msg.send(new Message(parse.next(),parse.next(),parse.next()));
+            if (name.equals("alice")) {
+                alice.msg.send(new Message(parse.next(), parse.next(), parse.next()));
+            } else if (name.equals("bob")) {
+                bob.msg.send(new Message(parse.next(), parse.next(), parse.next()));
+            } else if (name.equals("charlie")) {
+                charlie.msg.send(new Message(parse.next(), parse.next(), parse.next()));
+            } else if (name.equals("daphne")) {
+                daphne.msg.send(new Message(parse.next(), parse.next(), parse.next()));
             }
             command = input.nextLine();
         }
@@ -53,24 +53,24 @@ class testNode implements Runnable {
     public void run() {
         msg = new MessagePasser(configfile, name, clockType);
         /*if (name.equals("alice")) {
-            msg.send(new Message("bob", "MX", "bla"));
-//            msg.send(new Message("bob", "MX", "bla2"));
-            msg.send(new Message("charlie", "MX", "blatocharlie"));
-            msg.send(new Message("daphne", "MX", "blatodapne"));
-            //System.out.println(msg.receive().data);
-        } else if (name.equals("bob")) {
-            msg.send(new Message("charlie", "Lookup", "alltheblastocharliefrombob"));
-            msg.send(new Message("charlie", "Lookup", "another message to charlie"));
+         msg.send(new Message("bob", "MX", "bla"));
+         //            msg.send(new Message("bob", "MX", "bla2"));
+         msg.send(new Message("charlie", "MX", "blatocharlie"));
+         msg.send(new Message("daphne", "MX", "blatodapne"));
+         //System.out.println(msg.receive().data);
+         } else if (name.equals("bob")) {
+         msg.send(new Message("charlie", "Lookup", "alltheblastocharliefrombob"));
+         msg.send(new Message("charlie", "Lookup", "another message to charlie"));
 
 
-            msg.send(new Message("alice", "Ack", "blaaaaaaaaaaa"));
-            //System.out.println(msg.receive().data);
-        }
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(testNode.class.getName()).log(Level.SEVERE, null, ex);
-        }*/
+         msg.send(new Message("alice", "Ack", "blaaaaaaaaaaa"));
+         //System.out.println(msg.receive().data);
+         }
+         try {
+         Thread.sleep(1000);
+         } catch (InterruptedException ex) {
+         Logger.getLogger(testNode.class.getName()).log(Level.SEVERE, null, ex);
+         }*/
         while (true) {
             Message m = msg.receive();
             if (m != null) {

@@ -3,15 +3,17 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+
 /**
  *
  * @author Keane
  */
 import java.io.Serializable;
 
-public class TimeStamp implements Serializable{
+public class TimeStamp implements Serializable {
 
-    int[] value;
+    public int[] value;
+
     public TimeStamp(String type, int vectorlength) {
         if (type.equals("logical")) {
             this.value = new int[1];

@@ -71,7 +71,7 @@ public class MessagePasser {
         } else if (clockType.equals("vector")) {
             clock = new VectorClock(totalnodes, listencounter);
         } else {
-            System.out.println(clockType+" not a valid Clock option.");
+            System.out.println(clockType + " not a valid Clock option.");
         }
 
         //parse rules
@@ -256,9 +256,7 @@ public class MessagePasser {
             checkForUpdate();
         }
         m.set_source(localSource);
-        m.set_seqNum(seqNum);
         m.set_duplicate(false);
-        seqNum++;
         String src, dst, kind, action;
         int seq;
 
@@ -299,11 +297,15 @@ public class MessagePasser {
                         }
                     }
                 }
+                m.set_seqNum(seqNum);
+                seqNum++;
                 hostList.get(i).sock.send(new TimeStampedMessage(m, clock.getTimestamp()));
                 while (!sendDelayQueue.isEmpty()) {
                     Message delayedMessage = sendDelayQueue.poll();
+                    delayedMessage.set_seqNum(seqNum);
+                    seqNum++;
                     for (int j = 0; j < hostList.size(); j++) {
-                        if (hostList.get(j).name.equals(m.dest)) {
+                        if (hostList.get(j).name.equals(delayedMessage.dest)) {
                             hostList.get(j).sock.send(new TimeStampedMessage(delayedMessage, clock.getTimestamp()));
 
                         }
@@ -328,7 +330,7 @@ public class MessagePasser {
 //    }
     public Message receive() {
         TimeStampedMessage tm = receiveWithTimeStamp();
-        if(tm != null){
+        if (tm != null) {
             return tm.getMessage();
         }
         return null;
@@ -379,7 +381,6 @@ public class MessagePasser {
                                         delayed = false;
                                         return m;
                                     }
-
                                 }
                             }
                         }
@@ -561,7 +562,11 @@ class VectorClock extends ClockService {
     @Override
     public void updateTimeStamp(TimeStamp newstamp) {
         for (int i = 0; i < stamp.value.length; i++) {
+            if(i!=place){
             stamp.value[i] = max(stamp.value[i], newstamp.value[i]);
+            }else{
+                stamp.value[i] = max(stamp.value[i]+1, newstamp.value[i]);
+            }
         }
     }
 

@@ -4,7 +4,6 @@ import java.io.Serializable;
 public class Message implements Serializable {
 
     //Serial number needs to be the same in all instances. Randomly generated.
-
     private static final long serialVersionUID = 1529127835408294640L;
     public String dest;
     public String kind;
@@ -19,6 +18,15 @@ public class Message implements Serializable {
         data = newdata;
     }
 
+    public Message(Message m) {
+        this.dest = m.dest;
+        this.kind = m.kind;
+        this.data = m.data;
+        this.source = m.source;
+        this.sequenceNumber = m.sequenceNumber;
+        this.dupe = m.dupe;
+    }
+
     public void set_source(String newsource) {
         source = newsource;
     }
@@ -27,32 +35,11 @@ public class Message implements Serializable {
         sequenceNumber = newsequenceNumber;
     }
 
-	public Boolean getDupe() {
-		return dupe;
-	}
+    public Boolean getDupe() {
+        return dupe;
+    }
 
-	public void set_duplicate(Boolean d) {
-		dupe = d;
-	}
-
-
-    /*
-     * SendMessage Implementation
-     * 
-     * private ObjectInputStream input = null;
-     * private ObjectOutpputStream output = null;
-     * 
-     * 
-     * ....
-     * SEND()
-     * Message m;
-     * output = new ObjectOutputStream(socket.getOutputStream());
-     * output.writeObject(m);
-     * 
-     * 
-     * RECEIVE()
-     * input = new ObjectInputStream(socket.getInputStream());
-     * Message received = (Message) input.readObject();
-     * 
-     */
+    public void set_duplicate(Boolean d) {
+        dupe = d;
+    }
 }
