@@ -327,7 +327,11 @@ public class MessagePasser {
 //        }
 //    }
     public Message receive() {
-        return receiveWithTimeStamp().getMessage();
+        TimeStampedMessage tm = receiveWithTimeStamp();
+        if(tm != null){
+            return tm.getMessage();
+        }
+        return null;
     }
 
     public TimeStampedMessage receiveWithTimeStamp() {
