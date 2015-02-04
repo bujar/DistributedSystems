@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import static java.lang.Math.max;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -24,25 +25,27 @@ public class MessagePasser {
     public ArrayList<Rule> sendRules = new ArrayList<Rule>();
     public ArrayList<Rule> recvRules = new ArrayList<Rule>();
     public int seqNum;
-    public LinkedList<Message> recvDelayQueue;
+    public LinkedList<TimeStampedMessage> recvDelayQueue;
     public LinkedList<Message> sendDelayQueue;
     public  static String configFile;
     public String localSource;
     public boolean delayed;
     public long lastModified;
-    public MessagePasser(String pathName, String localName) {
+    public ClockService clock;
+    public MessagePasser(String pathName, String localName, String clockType) throws Exception {
     	delayed = false;
         seqNum = 0;
         configFile = pathName;
         localSource = localName;
         sendDelayQueue = new LinkedList<Message>();
-        recvDelayQueue = new LinkedList<Message>();
+        recvDelayQueue = new LinkedList<TimeStampedMessage>();
         File file = new File(pathName);
         lastModified = file.lastModified();
         Map<String, ArrayList<Map<String, Object>>> data = getYamlData(pathName);
         ArrayList<Map<String, Object>> config = data.get("configuration");
 
-        String action = "bind";
+        
+        
         Integer localport = 0;
         Host localhost = null;
         boolean myturn = false;
@@ -61,6 +64,15 @@ public class MessagePasser {
                 listencounter = totalnodes;
             }
             totalnodes++;
+        }
+        
+        //intiialize clock
+        if(clockType.equals("logical")){
+            clock = new LogicalClock();
+        }else if(clockType.equals("vector")){
+            clock = new VectorClock(totalnodes, listencounter);
+        }else{
+            throw new Exception("clock type selected not valid");
         }
         
         //parse rules
@@ -269,12 +281,12 @@ public class MessagePasser {
 									}
 									else if (action.equals("duplicate")) {
 										System.out.println("duplicated-------------------------------");
-										hostList.get(i).sock.send(m);
+										hostList.get(i).sock.send(new TimeStampedMessage(m, clock.getTimestamp()));
 										Message copy = new Message(m.dest, m.kind, m.data);
 										copy.set_source(localSource);
 										copy.set_seqNum(seqNum-1);
 										copy.set_duplicate(true);
-										hostList.get(i).sock.send(copy);
+										hostList.get(i).sock.send(new TimeStampedMessage(copy, clock.getTimestamp()));
 										return;
 									}
 								}
@@ -282,12 +294,12 @@ public class MessagePasser {
 						}
 					} 
 				}
-				hostList.get(i).sock.send(m);
+				hostList.get(i).sock.send(new TimeStampedMessage(m, clock.getTimestamp()));
 				while (!sendDelayQueue.isEmpty()){
 					Message delayedMessage = sendDelayQueue.poll();
 						for (int j = 0; j < hostList.size(); j++) {
 							if (hostList.get(j).name.equals(m.dest)) {
-						hostList.get(j).sock.send(delayedMessage);
+                                                            hostList.get(j).sock.send(new TimeStampedMessage(delayedMessage,clock.getTimestamp()));
 							
 						}
 					}
@@ -298,7 +310,7 @@ public class MessagePasser {
 		}
 	}
 	
-//    public Message receive() {
+//    public TimeStampedMessage receive() {
 //        int i = 0;
 //        while (i < hostList.size() && hostList.get(i).sock.receiveQueue.isEmpty()) {
 //            i++;
@@ -310,7 +322,11 @@ public class MessagePasser {
 //        }
 //    }
 
-    public Message receive() {
+    public Message receive(){
+        return receiveWithTimeStamp().getMessage();
+    }
+        
+    public TimeStampedMessage receiveWithTimeStamp() {
         int i = 0;
         String src, dst, kind, action;
         boolean duplicate;
@@ -324,7 +340,7 @@ public class MessagePasser {
         }
         if (i < hostList.size()) {
         	
-            Message m =  hostList.get(i).sock.receiveQueue.poll();
+            TimeStampedMessage m =  hostList.get(i).sock.receiveQueue.poll();
     		System.out.println("Receiving message from " +m.source +  " to " + m.dest + " " + m.kind + " with sequenceNum: " + m.sequenceNumber);
 
             for (Rule rule : recvRules) {
@@ -342,13 +358,13 @@ public class MessagePasser {
 								if (m.getDupe() != null && m.getDupe() == duplicate){
 									if (action.equals("drop")){
 										System.out.println("dropped--------------------------------");
-										return receive();
+										return receiveWithTimeStamp();
 									}
 									else if (action.equals("delay")){
 										System.out.println("delay----------------------------------------");
 										recvDelayQueue.add(m);
 										delayed = true;
-										return receive();
+										return receiveWithTimeStamp();
 									}
 									else if (action.equals("duplicate")) {
 										System.out.println("duplicated-------------------------------");
@@ -369,7 +385,7 @@ public class MessagePasser {
         }
 
 		if (delayed == false){
-			 Message d = null;
+			TimeStampedMessage d = null;
 	            	d = recvDelayQueue.poll();
 	            	return d;				            
 		}
@@ -381,7 +397,7 @@ public class MessagePasser {
 class SocketHandler implements Runnable {
 
 	public Socket sock;
-    public LinkedList<Message> receiveQueue;
+    public LinkedList<TimeStampedMessage> receiveQueue;
     private Thread t;
     private ObjectOutputStream output = null;
     private ObjectInputStream input = null;
@@ -395,10 +411,10 @@ class SocketHandler implements Runnable {
                 Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE, null, ex);
             }
         
-        receiveQueue = new LinkedList<Message>();
+        receiveQueue = new LinkedList<TimeStampedMessage>();
     }
 
-    public void send(Message m) {
+    public void send(TimeStampedMessage m) {
         try {
             
             output.writeObject(m);
@@ -411,8 +427,8 @@ class SocketHandler implements Runnable {
         try {
             
             while (true) {
-                Message received = null;
-                received = (Message) input.readObject();
+                TimeStampedMessage received = null;
+                received = (TimeStampedMessage) input.readObject();
                 receiveQueue.add(received);
             }
         } catch (IOException ex) {
@@ -466,4 +482,94 @@ class Rule {
 		this.seq = seq;
 		this.duplicate = duplicate;
 	}
+}
+
+abstract class ClockService {
+
+    public abstract TimeStamp getTimestamp();
+
+    public abstract void updateTimeStamp(TimeStamp newstamp);
+
+    public abstract boolean happenedBefore(TimeStamp otherstamp);
+
+    public abstract boolean happenedAfter(TimeStamp otherstamp);
+
+    public abstract boolean concurrentWith(TimeStamp otherstamp);
+}
+
+class LogicalClock extends ClockService {
+
+    TimeStamp stamp;
+
+    public LogicalClock() {
+        stamp = new TimeStamp("logical", 0);
+    }
+
+    @Override
+    public TimeStamp getTimestamp() {
+        stamp.value[0]++;
+        return stamp;
+    }
+
+    @Override
+    public void updateTimeStamp(TimeStamp newstamp) {
+        stamp.value[0] = max(stamp.value[0], newstamp.value[0] + 1);
+    }
+
+    @Override
+    public boolean happenedBefore(TimeStamp otherstamp) {
+        System.out.println("Logical Clock cannot make \"Happened Before\" comparison");
+        return false;
+    }
+
+    @Override
+    public boolean concurrentWith(TimeStamp otherstamp) {
+        System.out.println("Logical Clock cannot make \"Concurrent With\" comparison");
+        return false;
+    }
+
+    @Override
+    public boolean happenedAfter(TimeStamp otherstamp) {
+        System.out.println("Logical Clock cannot make \"Happened After\" comparison");
+        return false;
+    }
+}
+
+class VectorClock extends ClockService {
+
+    TimeStamp stamp;
+    int place;
+
+    public VectorClock(int size, int newplace) {
+        stamp = new TimeStamp("vector", size);
+        place = newplace;
+    }
+
+    @Override
+    public TimeStamp getTimestamp() {
+        stamp.value[place]++;
+        return stamp;
+    }
+
+    @Override
+    public void updateTimeStamp(TimeStamp newstamp) {
+        for (int i = 0; i < stamp.value.length; i++) {
+            stamp.value[i] = max(stamp.value[i], newstamp.value[i]);
+        }
+    }
+
+    @Override
+    public boolean happenedBefore(TimeStamp otherstamp) {
+        return stamp.happenedBefore(otherstamp);
+    }
+
+    @Override
+    public boolean concurrentWith(TimeStamp otherstamp) {
+        return stamp.concurrentWith(otherstamp);
+    }
+
+    @Override
+    public boolean happenedAfter(TimeStamp otherstamp) {
+        return stamp.happenedAfter(otherstamp);
+    }
 }
