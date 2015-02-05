@@ -22,14 +22,22 @@ public class Main {
         while (true) {
             Scanner parse = new Scanner(command);
             String name = parse.next();
+            if (name.equals("showlogs")){
+            	alice.msg.send(new TimeStampedMessage("logger", "showlogs", "showlogs", null));	//using alice.msg.send - will change later  
+            }
+            else{
+            String arg1 = parse.next();
+            String arg2 = parse.next();
+            String arg3 = parse.next();
             if (name.equals("alice")) {
-                alice.msg.send(new Message(parse.next(), parse.next(), parse.next()));
+                alice.msg.send(new Message(arg1, arg2, arg3));
             } else if (name.equals("bob")) {
-                bob.msg.send(new Message(parse.next(), parse.next(), parse.next()));
+                bob.msg.send(new Message(arg1, arg2, arg3));
             } else if (name.equals("charlie")) {
-                charlie.msg.send(new Message(parse.next(), parse.next(), parse.next()));
+                charlie.msg.send(new Message(arg1, arg2, arg3));
             } else if (name.equals("daphne")) {
-                daphne.msg.send(new Message(parse.next(), parse.next(), parse.next()));
+                daphne.msg.send(new Message(arg1, arg2, arg3));
+            }
             }
             command = input.nextLine();
         }
@@ -71,10 +79,16 @@ class testNode implements Runnable {
          } catch (InterruptedException ex) {
          Logger.getLogger(testNode.class.getName()).log(Level.SEVERE, null, ex);
          }*/
+//        while (true) {
+//            Message m = msg.receive();
+//            if (m != null) {
+//                System.out.println(name + " received: " + m.data);
+//            }
         while (true) {
-            Message m = msg.receive();
-            if (m != null) {
-                System.out.println(name + " received: " + m.data);
+            TimeStampedMessage tm = msg.receiveWithTimeStamp();
+            if (tm != null) {
+            	msg.sendToLogger(tm);
+                System.out.println(name + " received: " + tm.data);
             }
             try {
                 Thread.sleep(1000);
