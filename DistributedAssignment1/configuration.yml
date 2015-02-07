@@ -25,6 +25,7 @@ configuration :
   - name : logger
     ip : 127.0.0.1
     port : 15233
+    logAllMessages : true
 
 
 sendRules :

@@ -8,10 +8,10 @@ public class Main {
     public static void main(String[] args) {
 
         //will change to retrieving paramaters from user args
-        testNode alice = new testNode("configuration.yml", "alice", "vector");
-        testNode bob = new testNode("configuration.yml", "bob", "vector");
-        testNode charlie = new testNode("configuration.yml", "charlie", "vector");
-        testNode daphne = new testNode("configuration.yml", "daphne", "vector");
+        testNode alice = new testNode("configuration.yml", "alice", "logical");
+        testNode bob = new testNode("configuration.yml", "bob", "logical");
+        testNode charlie = new testNode("configuration.yml", "charlie", "logical");
+        testNode daphne = new testNode("configuration.yml", "daphne", "logical");
         alice.start();
         bob.start();
         charlie.start();
@@ -87,7 +87,8 @@ class testNode implements Runnable {
         while (true) {
             TimeStampedMessage tm = msg.receiveWithTimeStamp();
             if (tm != null) {
-            	msg.sendToLogger(tm);
+            	if (msg.logAllMessages)
+            		msg.sendToLogger(tm);
                 System.out.println(name + " received: " + tm.data);
             }
             try {

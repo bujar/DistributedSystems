@@ -6,7 +6,9 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+
 import static java.lang.Math.max;
+
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -31,6 +33,7 @@ public class MessagePasser {
 	public boolean delayed;
 	public long lastModified;
 	public ClockService clock;
+	public boolean logAllMessages;
 
 	public MessagePasser(String pathName, String localName, String clockType) {
 		delayed = false;
@@ -65,6 +68,8 @@ public class MessagePasser {
 			totalnodes++;
 		}
 
+		checkForUpdate();
+
 		// intiialize clock
 		if (clockType.equals("logical")) {
 			clock = new LogicalClock();
@@ -72,42 +77,6 @@ public class MessagePasser {
 			clock = new VectorClock(totalnodes, listencounter);
 		} else {
 			System.out.println(clockType + " not a valid Clock option.");
-		}
-
-		// parse rules
-		ArrayList<Map<String, Object>> sendRule = data.get("sendRules");
-		for (Map<String, Object> key : sendRule) {
-			String a = (String) key.get("action");
-			String src = (String) key.get("src");
-			String dst = (String) key.get("dest");
-			String kind = (String) key.get("kind");
-			boolean duplicate = false;
-			if (key.get("duplicate") != null) {
-				duplicate = (Boolean) key.get("duplicate");
-			}
-			int seq = -1;
-			if (key.get("seqNum") != null) {
-				seq = (Integer) key.get("seqNum");
-			}
-			Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
-			sendRules.add(rule);
-		}
-		ArrayList<Map<String, Object>> recvRule = data.get("receiveRules");
-		for (Map<String, Object> key : recvRule) {
-			String a = (String) key.get("action");
-			String src = (String) key.get("src");
-			String dst = (String) key.get("dest");
-			String kind = (String) key.get("kind");
-			boolean duplicate = false;
-			if (key.get("duplicate") != null) {
-				duplicate = (Boolean) key.get("duplicate");
-			}
-			int seq = -1;
-			if (key.get("seqNum") != null) {
-				seq = (Integer) key.get("seqNum");
-			}
-			Rule rule = new Rule(a, src, dst, kind, seq, duplicate);
-			recvRules.add(rule);
 		}
 
 		// listen first
@@ -224,6 +193,14 @@ public class MessagePasser {
 		sendRules.clear();
 		recvRules.clear();
 		Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
+        ArrayList<Map<String, Object>> checkLog = data.get("configuration");
+        for (Map<String, Object> key : checkLog) {
+            String name = (String) key.get("name");
+            if (name.equals("logger")) {
+            	logAllMessages = (Boolean) key.get("logAllMessages");
+            }
+        }
+        
 		ArrayList<Map<String, Object>> sendRule = data.get("sendRules");
 		for (Map<String, Object> key : sendRule) {
 			String a = (String) key.get("action");
