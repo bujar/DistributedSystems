@@ -7,7 +7,9 @@ import java.util.logging.Logger;
 
 public class LoggerMain {
     public static void main(String[] args) {
+
         LoggerNode logger = new LoggerNode("configuration.yml", "logger", "vector");
+        logger.start();
     }
 }
 
