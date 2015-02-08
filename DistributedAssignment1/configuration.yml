@@ -18,10 +18,6 @@ configuration :
     ip : 10.0.1.8
     port : 12998
     
-  - name : daphne
-    ip : 10.0.1.8
-    port : 1987
-
   - name : logger
     ip : 10.0.1.8
     port : 15233
