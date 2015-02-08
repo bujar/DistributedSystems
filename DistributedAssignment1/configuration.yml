@@ -7,23 +7,23 @@
 # The local node’s name is included in this list
 configuration :
   - name : alice
-    ip : 127.0.0.1
+    ip : 10.0.1.20
     port : 12344 # This is the incoming port on which MP will listen
                   # May be changed for further communication as usual
   - name : bob
-    ip : 127.0.0.1
+    ip : 10.0.1.20
     port : 14255
     
   - name : charlie
-    ip : 127.0.0.1
+    ip : 10.0.1.8
     port : 12998
     
   - name : daphne
-    ip : 127.0.0.1
+    ip : 10.0.1.8
     port : 1987
 
   - name : logger
-    ip : 127.0.0.1
+    ip : 10.0.1.8
     port : 15233
     logAllMessages : false
 
