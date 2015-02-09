@@ -586,18 +586,25 @@ class LogicalClock extends ClockService {
 class VectorClock extends ClockService {
 
 	TimeStamp stamp;
+        int size;
 	int place;
 
-	public VectorClock(int size, int newplace) {
-		stamp = new TimeStamp("vector", size);
+	public VectorClock(int newsize, int newplace) {
+		stamp = new TimeStamp("vector", newsize);
+                size = newsize;
 		place = newplace;
 	}
 
 	@Override
 	public TimeStamp getTimestamp() {
-            System.out.println("incrementing timestamp");
+            System.out.println("incrementing timestamp at " +place);
 		stamp.value[place]+=1;
-		return stamp;
+                System.out.println("new value at "+place+" is "+ stamp.value[place]);
+                TimeStamp newtimestamp = new TimeStamp("vector", size);
+                for(int i = 0; i < newtimestamp.value.length; i++){
+                    newtimestamp.value[i] = stamp.value[i];
+                }
+		return newtimestamp;
 	}
 
 	@Override
