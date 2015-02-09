@@ -6,38 +6,31 @@ import java.util.logging.Logger;
 public class Main {
 
     public static void main(String[] args) {
-
-        //will change to retrieving paramaters from user args
-        testNode alice = new testNode("configuration.yml", "alice", "logical");
-        testNode bob = new testNode("configuration.yml", "bob", "logical");
-        testNode charlie = new testNode("configuration.yml", "charlie", "logical");
-        testNode daphne = new testNode("configuration.yml", "daphne", "logical");
-        alice.start();
-        bob.start();
-        charlie.start();
-        daphne.start();
-
         Scanner input = new Scanner(System.in);
         String command = input.nextLine();
+        Scanner parse = new Scanner(command);
+        //will change to retrieving paramaters from user args
+    //    testNode alice = new testNode("configuration.yml", "alice", "logical");
+   //     testNode bob = new testNode("configuration.yml", "bob", "logical");
+        testNode node = new testNode("configuration.yml", parse.next(), parse.next());
+  //      testNode daphne = new testNode("configuration.yml", "daphne", "logical");
+//        alice.start();
+//        bob.start();
+        node.start();
+ //       daphne.start();
+
+        
+        command = input.nextLine();
         while (true) {
-            Scanner parse = new Scanner(command);
+            parse = new Scanner(command);
             String name = parse.next();
             if (name.equals("showlogs")){
-            	alice.msg.send(new TimeStampedMessage("logger", "showlogs", "showlogs", null));	//using alice.msg.send - will change later  
+            	node.msg.send(new TimeStampedMessage("logger", "showlogs", "showlogs", null));	//using alice.msg.send - will change later  
             }
             else{
             String arg1 = parse.next();
-            String arg2 = parse.next();
-            String arg3 = parse.next();
-            if (name.equals("alice")) {
-                alice.msg.send(new Message(arg1, arg2, arg3));
-            } else if (name.equals("bob")) {
-                bob.msg.send(new Message(arg1, arg2, arg3));
-            } else if (name.equals("charlie")) {
-                charlie.msg.send(new Message(arg1, arg2, arg3));
-            } else if (name.equals("daphne")) {
-                daphne.msg.send(new Message(arg1, arg2, arg3));
-            }
+            String arg2 = parse.nextLine();
+                node.msg.send(new Message(name, arg1, arg2));
             }
             command = input.nextLine();
         }

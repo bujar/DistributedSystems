@@ -12,7 +12,7 @@ public class LoggerMain {
 	
     public static void main(String[] args) {
 
-        LoggerNode logger = new LoggerNode("configuration.yml", "logger", "logical");
+        LoggerNode logger = new LoggerNode("configuration.yml", "logger", "vector");
         logger.start();
     }
 }
@@ -48,7 +48,7 @@ class LoggerNode implements Runnable {
                 		if (!temp.isEmpty()){
 	                		System.out.println("\tConcurrent With:");
 	                		for (TimeStampedMessage event : temp){
-	                    		System.out.println("\t" + event.stamp.value[0] + "  EVENT: " + event.source +" "+ event.kind + " " + event.dest + " seq: " + event.sequenceNumber + "\t\"" + event.data + "\"");                    	
+	                    		System.out.println("\t" + event.stamp.value[0]+","+event.stamp.value[1]+","+event.stamp.value[2]+","+event.stamp.value[3]+ "  EVENT: " + event.source +" "+ event.kind + " " + event.dest + " seq: " + event.sequenceNumber + "\t\"" + event.data + "\"");                    	
 	
 	                		}
                 		}
