@@ -419,7 +419,9 @@ public class MessagePasser {
 		if (delayed == false) {
 			TimeStampedMessage d = null;
 			d = recvDelayQueue.poll();
-                        clock.updateTimeStamp(d.stamp);
+                        if(d != null){
+                            clock.updateTimeStamp(d.stamp);
+                        }
 			return d;
 		}
 		return null;

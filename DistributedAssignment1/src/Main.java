@@ -20,8 +20,9 @@ public class Main {
  //       daphne.start();
 
         
-        command = input.nextLine();
+        
         while (true) {
+            command = input.nextLine();
             parse = new Scanner(command);
             String name = parse.next();
             if (name.equals("showlogs")){
@@ -32,7 +33,6 @@ public class Main {
             String arg2 = parse.nextLine();
                 node.msg.send(new Message(name, arg1, arg2));
             }
-            command = input.nextLine();
         }
     }
 }
