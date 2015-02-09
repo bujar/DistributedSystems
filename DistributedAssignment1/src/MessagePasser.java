@@ -1,6 +1,7 @@
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -11,6 +12,9 @@ import static java.lang.Math.max;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Map;
@@ -29,22 +33,24 @@ public class MessagePasser {
 	public LinkedList<TimeStampedMessage> recvDelayQueue;
 	public LinkedList<Message> sendDelayQueue;
 	public static String configFile;
+	public static String configURL;
 	public String localSource;
 	public boolean delayed;
-	public long lastModified;
 	public ClockService clock;
 	public boolean logAllMessages;
 
 	public MessagePasser(String pathName, String localName, String clockType) {
+
 		delayed = false;
 		seqNum = 0;
-		configFile = pathName;
+		configURL = pathName;
+		configFile = "configuration.yml";
 		localSource = localName;
 		sendDelayQueue = new LinkedList<Message>();
 		recvDelayQueue = new LinkedList<TimeStampedMessage>();
-		File file = new File(pathName);
-		lastModified = file.lastModified();
-		Map<String, ArrayList<Map<String, Object>>> data = getYamlData(pathName);
+
+		checkForUpdate();
+		Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
 		ArrayList<Map<String, Object>> config = data.get("configuration");
 
 		Integer localport = 0;
@@ -67,8 +73,6 @@ public class MessagePasser {
 			}
 			totalnodes++;
 		}
-
-		checkForUpdate();
 
 		// intiialize clock
 		if (clockType.equals("logical")) {
@@ -131,63 +135,70 @@ public class MessagePasser {
 		// now reach out to remaining nodes
 		// iterate through list again to connect to all machines
 		for (Map<String, Object> key : config) {
-                    boolean connectionmade = false;
-                        while(!connectionmade){
-                            connectionmade = true;
-			// is this me? if it is, go through rest of list and send my own
-			// Host object to every other person on list with diff connect port,
-			// wait for them to connect back to me, send ping to say I am done
-			// is this not me? then wait for this guy to connect to me and send
-			// me his Host object, connect to him based on what his host object
-			// said, store it, wait for ping to move on
-			String name = (String) key.get("name");
-			if (name.equals(localName)) {
-				myturn = true;
-			}
-			if (myturn && !name.equals(localName)) {
-				String ipAddr = (String) key.get("ip");
-				int port = (Integer) key.get("port");
-				try {
-					// System.out.println(localName + " connecting to " + name);
-					Socket connection = new Socket(ipAddr, port);
-					if (connection.isConnected()) {
-						// System.out.println(localName + " connection to " +
-						// name + " succeeded");
-					}
-					localhost.port = localport + hostcounter;
-					ObjectOutputStream output = new ObjectOutputStream(
-							connection.getOutputStream());
-					output.writeObject(localhost);
-					output.close();
-					connection.close();
-					// System.out.println(localName +
-					// " waiting for reconnect from " + name);
-
-					Socket connection2 = (new ServerSocket(localport
-							+ hostcounter)).accept();
-					if (connection2.isConnected()) {
-						// System.out.println(localName +
-						// " final connection to " + name + " succeeded");
-					}
-					Host host = new Host(name, new SocketHandler(connection2,
-							clock), ipAddr);
-					hostList.add(host);
-					hostcounter++;
-					// System.out.println(localName + " added one host. " +
-					// hostList.size() + " hosts connected");
-				} catch (IOException ex) {
-                                    try {
-                                        connectionmade = false;
-                                        Thread.sleep(1000);
-                                    } catch (InterruptedException ex1) {
-                                        Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex1);
-                                    }
-					//Logger.getLogger(SocketHandler.class.getName()).log(
-							//Level.SEVERE, null, ex);
+			boolean connectionmade = false;
+			while (!connectionmade) {
+				connectionmade = true;
+				// is this me? if it is, go through rest of list and send my own
+				// Host object to every other person on list with diff connect
+				// port,
+				// wait for them to connect back to me, send ping to say I am
+				// done
+				// is this not me? then wait for this guy to connect to me and
+				// send
+				// me his Host object, connect to him based on what his host
+				// object
+				// said, store it, wait for ping to move on
+				String name = (String) key.get("name");
+				if (name.equals(localName)) {
+					myturn = true;
 				}
+				if (myturn && !name.equals(localName)) {
+					String ipAddr = (String) key.get("ip");
+					int port = (Integer) key.get("port");
+					try {
+						// System.out.println(localName + " connecting to " +
+						// name);
+						Socket connection = new Socket(ipAddr, port);
+						if (connection.isConnected()) {
+							// System.out.println(localName + " connection to "
+							// +
+							// name + " succeeded");
+						}
+						localhost.port = localport + hostcounter;
+						ObjectOutputStream output = new ObjectOutputStream(
+								connection.getOutputStream());
+						output.writeObject(localhost);
+						output.close();
+						connection.close();
+						// System.out.println(localName +
+						// " waiting for reconnect from " + name);
 
+						Socket connection2 = (new ServerSocket(localport
+								+ hostcounter)).accept();
+						if (connection2.isConnected()) {
+							// System.out.println(localName +
+							// " final connection to " + name + " succeeded");
+						}
+						Host host = new Host(name, new SocketHandler(
+								connection2, clock), ipAddr);
+						hostList.add(host);
+						hostcounter++;
+						// System.out.println(localName + " added one host. " +
+						// hostList.size() + " hosts connected");
+					} catch (IOException ex) {
+						try {
+							connectionmade = false;
+							Thread.sleep(1000);
+						} catch (InterruptedException ex1) {
+							Logger.getLogger(MessagePasser.class.getName())
+									.log(Level.SEVERE, null, ex1);
+						}
+						// Logger.getLogger(SocketHandler.class.getName()).log(
+						// Level.SEVERE, null, ex);
+					}
+
+				}
 			}
-                        }
 		}
 		System.out.println(localName + " done. " + hostList.size()
 				+ " hosts connected");
@@ -199,17 +210,28 @@ public class MessagePasser {
 
 	public void checkForUpdate() {
 		// parse rules
+		URL url;
+		try {
+			url = new URL(configURL);
+			ReadableByteChannel rbc = Channels.newChannel(url.openStream());
+			FileOutputStream fos = new FileOutputStream(configFile);
+			fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+			fos.close();
+		} catch (Exception e) {
+			System.out.println("error when accessing URL");
+		}
 		sendRules.clear();
 		recvRules.clear();
+
 		Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
-        ArrayList<Map<String, Object>> checkLog = data.get("configuration");
-        for (Map<String, Object> key : checkLog) {
-            String name = (String) key.get("name");
-            if (name.equals("logger")) {
-            	logAllMessages = (Boolean) key.get("logAllMessages");
-            }
-        }
-        
+		ArrayList<Map<String, Object>> checkLog = data.get("configuration");
+		for (Map<String, Object> key : checkLog) {
+			String name = (String) key.get("name");
+			if (name.equals("logger")) {
+				logAllMessages = (Boolean) key.get("logAllMessages");
+			}
+		}
+
 		ArrayList<Map<String, Object>> sendRule = data.get("sendRules");
 		for (Map<String, Object> key : sendRule) {
 			String a = (String) key.get("action");
@@ -263,10 +285,10 @@ public class MessagePasser {
 
 	public void send(Message m) {
 		// set message contents
-		File config = new File(configFile);
-		if (config.lastModified() != lastModified) {
-			checkForUpdate();
-		}
+		// File config = new File(configFile);
+		// if (config.lastModified() != lastModified) {
+		checkForUpdate();
+		// }
 		m.set_source(localSource);
 		m.set_duplicate(false);
 		String src, dst, kind, action;
@@ -367,10 +389,10 @@ public class MessagePasser {
 		String src, dst, kind, action;
 		boolean duplicate;
 		int seq;
-		File config = new File(configFile);
-		if (config.lastModified() != lastModified) {
-			checkForUpdate();
-		}
+		// File config = new File(configFile);
+		// if (config.lastModified() != lastModified) {
+		// checkForUpdate();
+		// }
 		while (i < hostList.size()
 				&& hostList.get(i).sock.receiveQueue.isEmpty()) {
 			i++;
@@ -378,10 +400,10 @@ public class MessagePasser {
 		if (i < hostList.size()) {
 
 			TimeStampedMessage m = hostList.get(i).sock.receiveQueue.poll();
-//			System.out.println("DEBUG: Receiving message from " + m.source
-//					+ " to " + m.dest + " " + m.kind + " with sequenceNum: "
-//					+ m.sequenceNumber);
-
+			// System.out.println("DEBUG: Receiving message from " + m.source
+			// + " to " + m.dest + " " + m.kind + " with sequenceNum: "
+			// + m.sequenceNumber);
+			checkForUpdate();
 			for (Rule rule : recvRules) {
 				src = rule.src;
 				dst = rule.dst;
@@ -420,7 +442,7 @@ public class MessagePasser {
 					}
 				}
 				delayed = false;
-                                clock.updateTimeStamp(m.stamp);
+				clock.updateTimeStamp(m.stamp);
 				return m;
 			}
 		}
@@ -428,9 +450,9 @@ public class MessagePasser {
 		if (delayed == false) {
 			TimeStampedMessage d = null;
 			d = recvDelayQueue.poll();
-                        if(d != null){
-                            clock.updateTimeStamp(d.stamp);
-                        }
+			if (d != null) {
+				clock.updateTimeStamp(d.stamp);
+			}
 			return d;
 		}
 		return null;
@@ -598,45 +620,39 @@ class LogicalClock extends ClockService {
 class VectorClock extends ClockService {
 
 	TimeStamp stamp;
-        int size;
+	int size;
 	int place;
 
 	public VectorClock(int newsize, int newplace) {
 		stamp = new TimeStamp("vector", newsize);
-                size = newsize;
+		size = newsize;
 		place = newplace;
 	}
 
 	@Override
 	public TimeStamp getTimestamp() {
-            System.out.println("incrementing timestamp at " +place);
-		stamp.value[place]+=1;
-                System.out.println("new value at "+place+" is "+ stamp.value[place]);
-                TimeStamp newtimestamp = new TimeStamp("vector", size);
-                for(int i = 0; i < newtimestamp.value.length; i++){
-                    newtimestamp.value[i] = stamp.value[i];
-                }
+		stamp.value[place] += 1;
+		TimeStamp newtimestamp = new TimeStamp("vector", size);
+		for (int i = 0; i < newtimestamp.value.length; i++) {
+			newtimestamp.value[i] = stamp.value[i];
+		}
 		return newtimestamp;
 	}
 
 	@Override
 	public void updateTimeStamp(TimeStamp newstamp) {
-                System.out.println("updating timestamp...");
-                System.out.println("Received");
-                String newstampS = "";
-                String oldstampS = "";
+		String newstampS = "";
+		String oldstampS = "";
 		for (int i = 0; i < stamp.value.length; i++) {
-                    System.out.print(newstamp.value[i]+" ");
-                        oldstampS += stamp.value[i]+" ";
+			// System.out.print(newstamp.value[i]+" ");
+			oldstampS += stamp.value[i] + " ";
 			if (i != place) {
 				stamp.value[i] = max(stamp.value[i], newstamp.value[i]);
 			} else {
 				stamp.value[i] = max(stamp.value[i] + 1, newstamp.value[i]);
 			}
-                        newstampS += stamp.value[i]+" ";
+			newstampS += stamp.value[i] + " ";
 		}
-                System.out.println("\nOldStamp: "+oldstampS);
-                System.out.println("\nNewStamp: "+newstampS);
 	}
 
 	@Override
