@@ -595,19 +595,29 @@ class VectorClock extends ClockService {
 
 	@Override
 	public TimeStamp getTimestamp() {
-		stamp.value[place]++;
+            System.out.println("incrementing timestamp");
+		stamp.value[place]+=1;
 		return stamp;
 	}
 
 	@Override
 	public void updateTimeStamp(TimeStamp newstamp) {
+                System.out.println("updating timestamp...");
+                System.out.println("Received");
+                String newstampS = "";
+                String oldstampS = "";
 		for (int i = 0; i < stamp.value.length; i++) {
+                    System.out.print(newstamp.value[i]+" ");
+                        oldstampS += stamp.value[i]+" ";
 			if (i != place) {
 				stamp.value[i] = max(stamp.value[i], newstamp.value[i]);
 			} else {
 				stamp.value[i] = max(stamp.value[i] + 1, newstamp.value[i]);
 			}
+                        newstampS += stamp.value[i]+" ";
 		}
+                System.out.println("\nOldStamp: "+oldstampS);
+                System.out.println("\nNewStamp: "+newstampS);
 	}
 
 	@Override
