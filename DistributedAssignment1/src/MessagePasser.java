@@ -131,6 +131,9 @@ public class MessagePasser {
 		// now reach out to remaining nodes
 		// iterate through list again to connect to all machines
 		for (Map<String, Object> key : config) {
+                    boolean connectionmade = false;
+                        while(!connectionmade){
+                            connectionmade = true;
 			// is this me? if it is, go through rest of list and send my own
 			// Host object to every other person on list with diff connect port,
 			// wait for them to connect back to me, send ping to say I am done
@@ -172,13 +175,19 @@ public class MessagePasser {
 					hostcounter++;
 					// System.out.println(localName + " added one host. " +
 					// hostList.size() + " hosts connected");
-
 				} catch (IOException ex) {
-					Logger.getLogger(SocketHandler.class.getName()).log(
-							Level.SEVERE, null, ex);
+                                    try {
+                                        connectionmade = false;
+                                        Thread.sleep(1000);
+                                    } catch (InterruptedException ex1) {
+                                        Logger.getLogger(MessagePasser.class.getName()).log(Level.SEVERE, null, ex1);
+                                    }
+					//Logger.getLogger(SocketHandler.class.getName()).log(
+							//Level.SEVERE, null, ex);
 				}
 
 			}
+                        }
 		}
 		System.out.println(localName + " done. " + hostList.size()
 				+ " hosts connected");
