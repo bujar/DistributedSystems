@@ -411,6 +411,7 @@ public class MessagePasser {
 					}
 				}
 				delayed = false;
+                                clock.updateTimeStamp(m.stamp);
 				return m;
 			}
 		}
@@ -418,6 +419,7 @@ public class MessagePasser {
 		if (delayed == false) {
 			TimeStampedMessage d = null;
 			d = recvDelayQueue.poll();
+                        clock.updateTimeStamp(d.stamp);
 			return d;
 		}
 		return null;
@@ -470,7 +472,6 @@ class SocketHandler implements Runnable {
 			while (true) {
 				TimeStampedMessage received = null;
 				received = (TimeStampedMessage) input.readObject();
-				clock.updateTimeStamp(received.stamp);
 				receiveQueue.add(received);
 			}
 		} catch (IOException ex) {
