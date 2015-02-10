@@ -458,7 +458,10 @@ public class MessagePasser {
 		return null;
 
 	}
-
+        
+        public TimeStamp getTimestamp(){
+            return clock.getTimestamp();
+        }
 	public void sendToLogger(TimeStampedMessage tm) {
 		for (int i = 0; i < hostList.size(); i++) {
 			if (hostList.get(i).name.equals("logger")) {

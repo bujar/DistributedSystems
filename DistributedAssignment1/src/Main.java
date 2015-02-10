@@ -31,6 +31,13 @@ public class Main {
 					node.msg.send(new TimeStampedMessage("logger", "showlogs",
 							"showlogs", null)); // using alice.msg.send - will
 												// change later
+				}else if (name.equals("showtime")) {
+                                    TimeStamp newstamp = node.msg.getTimestamp();
+                                    System.out.print("New TimeStamnp:");
+                                    for(int i=0; i< newstamp.value.length; i++){
+                                        System.out.print(" "+newstamp.value[i]);
+                                    }
+                                System.out.println("");
 				} else {
 					String arg1 = parse.next();
 					String arg2 = parse.nextLine();
@@ -89,6 +96,11 @@ class testNode implements Runnable {
 				if (msg.logAllMessages)
 					msg.sendToLogger(tm);
 				System.out.println(name + " received: " + tm.data);
+                                System.out.print("  Received TimeStamnp:");
+                                for(int i=0; i< tm.stamp.value.length; i++){
+                                    System.out.print(" "+tm.stamp.value[i]);
+                                }
+                                System.out.println("");
 			}
 			try {
 				Thread.sleep(1000);
