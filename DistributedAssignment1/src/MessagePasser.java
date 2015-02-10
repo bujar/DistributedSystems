@@ -46,7 +46,7 @@ public class MessagePasser {
 		configURL = pathName;
 		configFile = "configuration.yml";
 		localSource = localName;
-		sendDelayQueue = new LinkedList<Message>();
+		sendDelayQueue = new LinkedList<TimeStampedMessage>();
 		recvDelayQueue = new LinkedList<TimeStampedMessage>();
 
 		checkForUpdate();
