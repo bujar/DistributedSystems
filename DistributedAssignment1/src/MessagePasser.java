@@ -32,7 +32,7 @@ public class MessagePasser {
 	public ArrayList<Rule> recvRules = new ArrayList<Rule>();
 	public int seqNum;
 	public LinkedList<TimeStampedMessage> recvDelayQueue;
-	public LinkedList<Message> sendDelayQueue;
+	public LinkedList<TimeStampedMessage> sendDelayQueue;
 	public static String configFile;
 	public static String configURL;
 	public String localSource;
@@ -47,7 +47,7 @@ public class MessagePasser {
 		configURL = pathName;
 		configFile = "configuration.yml";
 		localSource = localName;
-		sendDelayQueue = new LinkedList<Message>();
+		sendDelayQueue = new LinkedList<TimeStampedMessage>();
 		recvDelayQueue = new LinkedList<TimeStampedMessage>();
 
 		checkForUpdate();
@@ -327,7 +327,8 @@ public class MessagePasser {
 												.println("dropped--------------------------------");
 										return;
 									} else if (action.equals("delay")) {
-										sendDelayQueue.add(m);
+										sendDelayQueue.add(new TimeStampedMessage(m,
+														clock.getTimestamp()));
 										// System.out.println("delayed message "
 										// + m.data);
 										System.out
@@ -360,13 +361,13 @@ public class MessagePasser {
 				hostList.get(i).sock.send(new TimeStampedMessage(m, clock
 						.getTimestamp()));
 				while (!sendDelayQueue.isEmpty()) {
-					Message delayedMessage = sendDelayQueue.poll();
+					TimeStampedMessage delayedMessage = sendDelayQueue.poll();
 					delayedMessage.set_seqNum(seqNum);
 					seqNum++;
 					for (int j = 0; j < hostList.size(); j++) {
 						if (hostList.get(j).name.equals(delayedMessage.dest)) {
-							hostList.get(j).sock.send(new TimeStampedMessage(
-									delayedMessage, clock.getTimestamp()));
+							hostList.get(j).sock.send(
+									delayedMessage);
 
 						}
 					}
