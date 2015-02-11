@@ -1,36 +1,41 @@
-# Defines which # Defines which nodes are used in the system and how to connect to them.
-# This element should only be referenced during the constructor's initial
-# setup.
-# All names must be unique.
-# No other nodes are known.
-# These names will be used for src and dest addresses for the Message
-# The local node’s name is included in this list
 configuration :
   - name : alice
-    ip : 10.0.1.20
-    port : 12344 # This is the incoming port on which MP will listen
-                  # May be changed for further communication as usual
+    ip : 127.0.0.1
+    port : 12344  
+               
   - name : bob
-    ip : 10.0.1.20
+    ip : 127.0.0.1
     port : 14255
     
   - name : charlie
-    ip : 10.0.1.8
+    ip : 127.0.0.1
     port : 12998
     
   - name : logger
-    ip : 10.0.1.8
-    port : 15233
+    ip : 127.0.0.1
+    port : 1987
     logAllMessages : false
 
 
 sendRules :
-  - action : duplicate # All Ack messages are duplicated
+  - action : duplicate
     kind : Ack
-  - action : delay  # All HTTP messages are delayed
+  - action : delay 
     kind : HTTP
-  - action : drop # Every Lookup message in the system will be dropped
+  - action : drop 
     kind : Lookup
 receiveRules :
-  - action : drop # 3rd message from Charlie that anyone
+  - action : drop
     duplicate: true
+
+groups :
+  - name : Group1
+    members :
+      - alice
+      - bob
+      - charlie
+  - name : Group2
+    members :
+    - daphnie
+    - bob
+    - charlie
