@@ -27,6 +27,7 @@ public class MessagePasser {
 	// done
 
 	public ArrayList<Host> hostList = new ArrayList<Host>();
+	public ArrayList<Group> groupList = new ArrayList<Group>();
 	public ArrayList<Rule> sendRules = new ArrayList<Rule>();
 	public ArrayList<Rule> recvRules = new ArrayList<Rule>();
 	public int seqNum;
@@ -51,6 +52,18 @@ public class MessagePasser {
 
 		checkForUpdate();
 		Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
+		ArrayList<Map<String, Object>> groups = data.get("groups");
+		// iterate through config file to find own info
+		for (Map<String, Object> key : groups) {
+			String groupName = (String) key.get("name");
+			ArrayList members = (ArrayList) key.get("members");
+			Group newGroup = new Group(groupName, members);
+			groupList.add(newGroup);
+		}
+		for (Group g : groupList){
+			System.out.println(g.name);
+			System.out.println(g.members.get(0));
+		}
 		ArrayList<Map<String, Object>> config = data.get("configuration");
 
 		Integer localport = 0;
@@ -210,16 +223,16 @@ public class MessagePasser {
 
 	public void checkForUpdate() {
 		// parse rules
-		URL url;
-		try {
-			url = new URL(configURL);
-			ReadableByteChannel rbc = Channels.newChannel(url.openStream());
-			FileOutputStream fos = new FileOutputStream(configFile);
-			fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-			fos.close();
-		} catch (Exception e) {
-			System.out.println("error when accessing URL");
-		}
+//		URL url;
+//		try {
+//			url = new URL(configURL);
+//			ReadableByteChannel rbc = Channels.newChannel(url.openStream());
+//			FileOutputStream fos = new FileOutputStream(configFile);
+//			fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+//			fos.close();
+//		} catch (Exception e) {
+//			System.out.println("error when accessing URL");
+//		}
 		sendRules.clear();
 		recvRules.clear();
 
