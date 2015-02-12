@@ -399,15 +399,19 @@ public class MessagePasser {
 		if (group == null)
 			return;
 
+		//send to all members of group
 		for (String member : group.members) {
 			m = new MulticastMessage(member, kind, message,
 					clock.getTimestamp(), group);
 			m.set_source(localSource);
+			//if it is an ack message
 			if (sequenceNumber != -1) {
 				m.set_seqNum(sequenceNumber);
-			} else
+			} 
+			//regular multicast message
+			else {
 				m.set_seqNum(seqNum);
-
+			}
 			for (int i = 0; i < hostList.size(); i++) {
 				if (hostList.get(i).name.equals(m.dest)) {
 					hostList.get(i).sock.send(m);
@@ -415,6 +419,7 @@ public class MessagePasser {
 				}
 			}
 		}
+		seqNum++;
 	}
 
 	public Message receive() {
