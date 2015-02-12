@@ -35,7 +35,7 @@ public class Main {
 					String group = parse.next();
 					String kind = parse.next();
 					String message = parse.nextLine();
-					node.msg.sendMulticast(group, kind, message);
+					node.msg.sendMulticast(group, kind, message, -1);
 				} else if (name.equals("showtime")) {
 					TimeStamp newstamp = node.msg.getTimestamp();
 					System.out.print("New TimeStamnp:");

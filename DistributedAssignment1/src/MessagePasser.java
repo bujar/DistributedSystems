@@ -39,6 +39,7 @@ public class MessagePasser {
 	public boolean delayed;
 	public ClockService clock;
 	public boolean logAllMessages;
+	public LinkedList<MulticastMessage> multicastQueue;
 
 	public MessagePasser(String pathName, String localName, String clockType) {
 
@@ -325,8 +326,11 @@ public class MessagePasser {
 										return;
 									} else if (action.equals("delay")) {
 										sendDelayQueue
-												.add(new MulticastMessage(new TimeStampedMessage(m,
-														clock.getTimestamp()), null));
+												.add(new MulticastMessage(
+														new TimeStampedMessage(
+																m,
+																clock.getTimestamp()),
+														null));
 										// System.out.println("delayed message "
 										// + m.data);
 										System.out
@@ -336,17 +340,22 @@ public class MessagePasser {
 										System.out
 												.println("duplicated-------------------------------");
 										hostList.get(i).sock
-												.send(new MulticastMessage(new TimeStampedMessage(m,
-														clock.getTimestamp()), null));
+												.send(new MulticastMessage(
+														new TimeStampedMessage(
+																m,
+																clock.getTimestamp()),
+														null));
 										Message copy = new Message(m.dest,
 												m.kind, m.data);
 										copy.set_source(localSource);
 										copy.set_seqNum(seqNum - 1);
 										copy.set_duplicate(true);
 										hostList.get(i).sock
-												.send(new MulticastMessage(new TimeStampedMessage(
-														copy, clock
-																.getTimestamp()), null));
+												.send(new MulticastMessage(
+														new TimeStampedMessage(
+																copy,
+																clock.getTimestamp()),
+														null));
 										return;
 									}
 								}
@@ -356,8 +365,8 @@ public class MessagePasser {
 				}
 				m.set_seqNum(seqNum);
 				seqNum++;
-				TimeStampedMessage tm = new TimeStampedMessage(m, clock
-						.getTimestamp());
+				TimeStampedMessage tm = new TimeStampedMessage(m,
+						clock.getTimestamp());
 				MulticastMessage multiMsg = new MulticastMessage(tm, null);
 				hostList.get(i).sock.send(multiMsg);
 				while (!sendDelayQueue.isEmpty()) {
@@ -377,10 +386,11 @@ public class MessagePasser {
 		}
 	}
 
-	public void sendMulticast(String groupName, String kind, String message) {
+	public void sendMulticast(String groupName, String kind, String message,
+			int sequenceNumber) {
 		Group group = null;
 		MulticastMessage m = null;
-		
+
 		for (Group g : groupList) {
 			if (groupName.equals(g.name))
 				group = g;
@@ -393,17 +403,22 @@ public class MessagePasser {
 			m = new MulticastMessage(member, kind, message,
 					clock.getTimestamp(), group);
 			m.set_source(localSource);
-		
-		for (int i = 0; i < hostList.size(); i++) {
-			if (hostList.get(i).name.equals(m.dest)) {
-				hostList.get(i).sock.send(m);
+			if (sequenceNumber != -1) {
+				m.set_seqNum(sequenceNumber);
+			} else
+				m.set_seqNum(seqNum);
 
+			for (int i = 0; i < hostList.size(); i++) {
+				if (hostList.get(i).name.equals(m.dest)) {
+					hostList.get(i).sock.send(m);
+
+				}
 			}
-		}
 		}
 	}
 
 	public Message receive() {
+		
 		TimeStampedMessage tm = receiveWithTimeStamp();
 		if (tm != null) {
 			return tm.getMessage();
@@ -425,11 +440,30 @@ public class MessagePasser {
 			i++;
 		}
 		if (i < hostList.size()) {
-
+			
 			MulticastMessage m = hostList.get(i).sock.receiveQueue.poll();
 			// System.out.println("DEBUG: Receiving message from " + m.source
 			// + " to " + m.dest + " " + m.kind + " with sequenceNum: "
 			// + m.sequenceNumber);
+			
+			//if its a multicast message
+			if (m.group != null) {
+				if (m.kind == "ACK")
+					for (MulticastMessage q : multicastQueue){
+						if (m.sequenceNumber == q.sequenceNumber)
+							q.addAck(m);
+							if (q.fullyAcked()){
+								multicastQueue.remove(q);
+								return q;
+							}
+					}
+				else {
+					multicastQueue.add(m);
+					sendAck(m.sequenceNumber, m.group);
+				}
+				return receiveWithTimeStamp();
+			}
+
 			checkForUpdate();
 			for (Rule rule : recvRules) {
 				src = rule.src;
@@ -486,6 +520,11 @@ public class MessagePasser {
 
 	}
 
+	private void sendAck(int sequenceNumber, Group group) {
+		sendMulticast(group.name, "ACK", "ACK", sequenceNumber);
+
+	}
+
 	public TimeStamp getTimestamp() {
 		return clock.getTimestamp();
 	}
@@ -529,6 +568,7 @@ class SocketHandler implements Runnable {
 					null, ex);
 		}
 	}
+
 	public void send(MulticastMessage m) {
 		try {
 			output.writeObject(m);
@@ -537,6 +577,7 @@ class SocketHandler implements Runnable {
 					null, ex);
 		}
 	}
+
 	public void run() {
 		try {
 
