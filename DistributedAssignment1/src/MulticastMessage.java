@@ -34,7 +34,7 @@ public class MulticastMessage extends TimeStampedMessage implements Serializable
     
     //will return true if the number of acks received equals the number of members in the group (means it also inludes own ack if self is in group)
     public boolean fullyAcked(){
-        return acksReceived.size() == group.members.size();
+        return acksReceived.size() == group.members.size()-1;
     }
     
     //returns time passes since this message was received. will be used to determine if Ack has been missing too long from another node

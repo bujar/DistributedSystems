@@ -50,7 +50,7 @@ public class MessagePasser {
 		localSource = localName;
 		sendDelayQueue = new LinkedList<TimeStampedMessage>();
 		recvDelayQueue = new LinkedList<MulticastMessage>();
-
+		multicastQueue = new LinkedList<MulticastMessage>();
 		checkForUpdate();
 		Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
 		ArrayList<Map<String, Object>> groups = data.get("groups");
@@ -399,16 +399,16 @@ public class MessagePasser {
 		if (group == null)
 			return;
 
-		//send to all members of group
+		// send to all members of group
 		for (String member : group.members) {
 			m = new MulticastMessage(member, kind, message,
 					clock.getTimestamp(), group);
 			m.set_source(localSource);
-			//if it is an ack message
+			// if it is an ack message
 			if (sequenceNumber != -1) {
 				m.set_seqNum(sequenceNumber);
-			} 
-			//regular multicast message
+			}
+			// regular multicast message
 			else {
 				m.set_seqNum(seqNum);
 			}
@@ -423,7 +423,7 @@ public class MessagePasser {
 	}
 
 	public Message receive() {
-		
+
 		TimeStampedMessage tm = receiveWithTimeStamp();
 		if (tm != null) {
 			return tm.getMessage();
@@ -445,25 +445,30 @@ public class MessagePasser {
 			i++;
 		}
 		if (i < hostList.size()) {
-			
+
 			MulticastMessage m = hostList.get(i).sock.receiveQueue.poll();
-			// System.out.println("DEBUG: Receiving message from " + m.source
-			// + " to " + m.dest + " " + m.kind + " with sequenceNum: "
-			// + m.sequenceNumber);
-			
-			//if its a multicast message
+			 System.out.println("DEBUG: Receiving message from " + m.source
+			 + " to " + m.dest + " " + m.kind + " with sequenceNum: "
+			 + m.sequenceNumber);
+
+			// if its a multicast message
 			if (m.group != null) {
-				if (m.kind == "ACK")
-					for (MulticastMessage q : multicastQueue){
-						if (m.sequenceNumber == q.sequenceNumber)
+				if (m.kind.equals("ACK")) {
+					for (MulticastMessage q : multicastQueue) {
+						System.out.println(m.sequenceNumber + " : " + q.sequenceNumber);
+						if (m.sequenceNumber == q.sequenceNumber){
+							System.out.println("Received, adding to queue");
 							q.addAck(m);
-							if (q.fullyAcked()){
-								multicastQueue.remove(q);
-								return q;
-							}
+						}
+						if (q.fullyAcked()) {
+							System.out.println("Fully acked, sending to app");
+							multicastQueue.remove(q);
+							return q;
+						}
 					}
-				else {
+				} else {
 					multicastQueue.add(m);
+					System.out.println("SENDING ACK MESSAGE");
 					sendAck(m.sequenceNumber, m.group);
 				}
 				return receiveWithTimeStamp();
