@@ -31,7 +31,7 @@ public class MessagePasser {
 	public ArrayList<Rule> sendRules = new ArrayList<Rule>();
 	public ArrayList<Rule> recvRules = new ArrayList<Rule>();
 	public int seqNum;
-	public LinkedList<TimeStampedMessage> recvDelayQueue;
+	public LinkedList<MulticastMessage> recvDelayQueue;
 	public LinkedList<TimeStampedMessage> sendDelayQueue;
 	public static String configFile;
 	public static String configURL;
@@ -48,7 +48,7 @@ public class MessagePasser {
 		configFile = "configuration.yml";
 		localSource = localName;
 		sendDelayQueue = new LinkedList<TimeStampedMessage>();
-		recvDelayQueue = new LinkedList<TimeStampedMessage>();
+		recvDelayQueue = new LinkedList<MulticastMessage>();
 
 		checkForUpdate();
 		Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
@@ -60,10 +60,7 @@ public class MessagePasser {
 			Group newGroup = new Group(groupName, members);
 			groupList.add(newGroup);
 		}
-		for (Group g : groupList){
-			System.out.println(g.name);
-			System.out.println(g.members.get(0));
-		}
+
 		ArrayList<Map<String, Object>> config = data.get("configuration");
 
 		Integer localport = 0;
@@ -223,16 +220,16 @@ public class MessagePasser {
 
 	public void checkForUpdate() {
 		// parse rules
-//		URL url;
-//		try {
-//			url = new URL(configURL);
-//			ReadableByteChannel rbc = Channels.newChannel(url.openStream());
-//			FileOutputStream fos = new FileOutputStream(configFile);
-//			fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-//			fos.close();
-//		} catch (Exception e) {
-//			System.out.println("error when accessing URL");
-//		}
+		// URL url;
+		// try {
+		// url = new URL(configURL);
+		// ReadableByteChannel rbc = Channels.newChannel(url.openStream());
+		// FileOutputStream fos = new FileOutputStream(configFile);
+		// fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+		// fos.close();
+		// } catch (Exception e) {
+		// System.out.println("error when accessing URL");
+		// }
 		sendRules.clear();
 		recvRules.clear();
 
@@ -327,8 +324,9 @@ public class MessagePasser {
 												.println("dropped--------------------------------");
 										return;
 									} else if (action.equals("delay")) {
-										sendDelayQueue.add(new TimeStampedMessage(m,
-														clock.getTimestamp()));
+										sendDelayQueue
+												.add(new MulticastMessage(new TimeStampedMessage(m,
+														clock.getTimestamp()), null));
 										// System.out.println("delayed message "
 										// + m.data);
 										System.out
@@ -338,17 +336,17 @@ public class MessagePasser {
 										System.out
 												.println("duplicated-------------------------------");
 										hostList.get(i).sock
-												.send(new TimeStampedMessage(m,
-														clock.getTimestamp()));
+												.send(new MulticastMessage(new TimeStampedMessage(m,
+														clock.getTimestamp()), null));
 										Message copy = new Message(m.dest,
 												m.kind, m.data);
 										copy.set_source(localSource);
 										copy.set_seqNum(seqNum - 1);
 										copy.set_duplicate(true);
 										hostList.get(i).sock
-												.send(new TimeStampedMessage(
+												.send(new MulticastMessage(new TimeStampedMessage(
 														copy, clock
-																.getTimestamp()));
+																.getTimestamp()), null));
 										return;
 									}
 								}
@@ -358,16 +356,17 @@ public class MessagePasser {
 				}
 				m.set_seqNum(seqNum);
 				seqNum++;
-				hostList.get(i).sock.send(new TimeStampedMessage(m, clock
-						.getTimestamp()));
+				TimeStampedMessage tm = new TimeStampedMessage(m, clock
+						.getTimestamp());
+				MulticastMessage multiMsg = new MulticastMessage(tm, null);
+				hostList.get(i).sock.send(multiMsg);
 				while (!sendDelayQueue.isEmpty()) {
 					TimeStampedMessage delayedMessage = sendDelayQueue.poll();
 					delayedMessage.set_seqNum(seqNum);
 					seqNum++;
 					for (int j = 0; j < hostList.size(); j++) {
 						if (hostList.get(j).name.equals(delayedMessage.dest)) {
-							hostList.get(j).sock.send(
-									delayedMessage);
+							hostList.get(j).sock.send(delayedMessage);
 
 						}
 					}
@@ -378,18 +377,32 @@ public class MessagePasser {
 		}
 	}
 
-	// public TimeStampedMessage receive() {
-	// int i = 0;
-	// while (i < hostList.size() &&
-	// hostList.get(i).sock.receiveQueue.isEmpty()) {
-	// i++;
-	// }
-	// if (i < hostList.size()) {
-	// return hostList.get(i).sock.receiveQueue.poll();
-	// } else {
-	// return null;
-	// }
-	// }
+	public void sendMulticast(String groupName, String kind, String message) {
+		Group group = null;
+		MulticastMessage m = null;
+		
+		for (Group g : groupList) {
+			if (groupName.equals(g.name))
+				group = g;
+		}
+
+		if (group == null)
+			return;
+
+		for (String member : group.members) {
+			m = new MulticastMessage(member, kind, message,
+					clock.getTimestamp(), group);
+			m.set_source(localSource);
+		
+		for (int i = 0; i < hostList.size(); i++) {
+			if (hostList.get(i).name.equals(m.dest)) {
+				hostList.get(i).sock.send(m);
+
+			}
+		}
+		}
+	}
+
 	public Message receive() {
 		TimeStampedMessage tm = receiveWithTimeStamp();
 		if (tm != null) {
@@ -398,7 +411,7 @@ public class MessagePasser {
 		return null;
 	}
 
-	public TimeStampedMessage receiveWithTimeStamp() {
+	public MulticastMessage receiveWithTimeStamp() {
 		int i = 0;
 		String src, dst, kind, action;
 		boolean duplicate;
@@ -413,7 +426,7 @@ public class MessagePasser {
 		}
 		if (i < hostList.size()) {
 
-			TimeStampedMessage m = hostList.get(i).sock.receiveQueue.poll();
+			MulticastMessage m = hostList.get(i).sock.receiveQueue.poll();
 			// System.out.println("DEBUG: Receiving message from " + m.source
 			// + " to " + m.dest + " " + m.kind + " with sequenceNum: "
 			// + m.sequenceNumber);
@@ -462,7 +475,7 @@ public class MessagePasser {
 		}
 
 		if (delayed == false) {
-			TimeStampedMessage d = null;
+			MulticastMessage d = null;
 			d = recvDelayQueue.poll();
 			if (d != null) {
 				clock.updateTimeStamp(d.stamp);
@@ -472,10 +485,11 @@ public class MessagePasser {
 		return null;
 
 	}
-        
-        public TimeStamp getTimestamp(){
-            return clock.getTimestamp();
-        }
+
+	public TimeStamp getTimestamp() {
+		return clock.getTimestamp();
+	}
+
 	public void sendToLogger(TimeStampedMessage tm) {
 		for (int i = 0; i < hostList.size(); i++) {
 			if (hostList.get(i).name.equals("logger")) {
@@ -488,7 +502,7 @@ public class MessagePasser {
 class SocketHandler implements Runnable {
 
 	public Socket sock;
-	public LinkedList<TimeStampedMessage> receiveQueue;
+	public LinkedList<MulticastMessage> receiveQueue;
 	private Thread t;
 	private ObjectOutputStream output = null;
 	private ObjectInputStream input = null;
@@ -504,7 +518,7 @@ class SocketHandler implements Runnable {
 			Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE,
 					null, ex);
 		}
-		receiveQueue = new LinkedList<TimeStampedMessage>();
+		receiveQueue = new LinkedList<MulticastMessage>();
 	}
 
 	public void send(TimeStampedMessage m) {
@@ -515,13 +529,20 @@ class SocketHandler implements Runnable {
 					null, ex);
 		}
 	}
-
+	public void send(MulticastMessage m) {
+		try {
+			output.writeObject(m);
+		} catch (IOException ex) {
+			Logger.getLogger(SocketHandler.class.getName()).log(Level.SEVERE,
+					null, ex);
+		}
+	}
 	public void run() {
 		try {
 
 			while (true) {
-				TimeStampedMessage received = null;
-				received = (TimeStampedMessage) input.readObject();
+				MulticastMessage received = null;
+				received = (MulticastMessage) input.readObject();
 				receiveQueue.add(received);
 			}
 		} catch (IOException ex) {
