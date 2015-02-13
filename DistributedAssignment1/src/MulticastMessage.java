@@ -23,7 +23,10 @@ public class MulticastMessage extends TimeStampedMessage implements Serializable
     }
     
     //adds ack to acklist
-    public void addAck(TimeStampedMessage newack){
+    public void addAck(MulticastMessage newack){
+        if(!group.members.contains(newack.source) || !group.name.equals(newack.group.name)){
+            return;
+        }
         for(int i = 0; i < acksReceived.size(); i++){
             if(acksReceived.get(i).source.equals(newack.source)){
                return; 
@@ -34,7 +37,25 @@ public class MulticastMessage extends TimeStampedMessage implements Serializable
     
     //will return true if the number of acks received equals the number of members in the group (means it also inludes own ack if self is in group)
     public boolean fullyAcked(){
-        return acksReceived.size() == group.members.size()-1;
+        return acksReceived.size() == group.members.size();
+    }
+    
+    public String getMissing(){
+        if(fullyAcked()){
+            return null;
+        }
+        for(String member : group.members){
+            boolean hasAcked = false;
+            for(TimeStampedMessage ack : acksReceived){
+                if(member.equals(ack.source)){
+                    hasAcked = true;
+                }
+            }
+            if(!hasAcked){
+                return member;
+            }
+        }
+        return null;
     }
     
     //returns time passes since this message was received. will be used to determine if Ack has been missing too long from another node

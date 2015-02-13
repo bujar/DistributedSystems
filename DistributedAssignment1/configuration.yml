@@ -26,7 +26,8 @@ sendRules :
     kind : Lookup
 receiveRules :
   - action : drop
-    duplicate: true
+    src : bob
+    seqNum : 1
 
 groups :
   - name : Group1
@@ -36,6 +37,6 @@ groups :
       - charlie
   - name : Group2
     members :
-    - daphnie
+    - logger
     - bob
     - charlie
