@@ -96,13 +96,13 @@ class testNode implements Runnable {
 		// System.out.println(name + " received: " + m.data);
 		// }
 		while (true) {
-			MulticastMessage tm = msg.receiveWithTimeStamp();
+			MulticastMessage tm = msg.receiveWithMulticast();
 			if (tm != null) {
 				if (msg.logAllMessages)
 					msg.sendToLogger(tm);
 				System.out.println(name + " received: " + tm.data + " from "
 						+ tm.source);
-				System.out.print("  Received TimeStamnp:");
+				System.out.print("  Received TimeStamp:");
 				for (int i = 0; i < tm.stamp.value.length; i++) {
 					System.out.print(" " + tm.stamp.value[i]);
 				}
