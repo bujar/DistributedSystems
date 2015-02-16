@@ -42,6 +42,7 @@ public class MessagePasser {
     public ClockService clock;
     public boolean logAllMessages;
     public LinkedList<MulticastMessage> multicastQueue;
+    public LinkedList<MulticastMessage> pushedMulticastQueue;
 
     public MessagePasser(String pathName, String localName, String clockType) {
 
@@ -53,6 +54,7 @@ public class MessagePasser {
         sendDelayQueue = new LinkedList<TimeStampedMessage>();
         recvDelayQueue = new LinkedList<MulticastMessage>();
         multicastQueue = new LinkedList<MulticastMessage>();
+        pushedMulticastQueue = new LinkedList<MulticastMessage>();
         checkForUpdate();
         Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
         ArrayList<Map<String, Object>> groups = data.get("groups");
@@ -421,7 +423,7 @@ public class MessagePasser {
 
                 }
             }
-            if (m.dest.equals(localSource)) {
+            if (m.dest.equals(localSource) && !m.kind.equals("ACK")) {
                 hostList.get(0).sock.receiveQueue.add(m);
             }
         }
@@ -447,22 +449,39 @@ public class MessagePasser {
             sortMulticastQueue();
             MulticastMessage mm = multicastQueue.getFirst();
             if (mm.fullyAcked()) {
-                System.out.println("DEBUG: Fully acked, sending to app");
+                mm.acksReceived.clear();
+                if (!pushedMulticastQueue.contains(mm)) {
+                    System.out.println("DEBUG: Fully acked, sending to app");
+                    multicastQueue.remove(mm);
+                    pushedMulticastQueue.add(mm);
+                    return mm;
+                }
                 multicastQueue.remove(mm);
-                return mm;
+
             } else {
                 if (mm.getTimePassed(System.currentTimeMillis()) > 2000) {
                     mm.timeReceived = System.currentTimeMillis();
-                    String missing = mm.getMissing();
-                    if (missing == null) {
-                        System.out.println("DEBUG: MISSING IS NULL");
-                    } else {
-                        System.out.println("DEBUG: "+missing+" has not ACKED. Resending...");
+                    String missing = mm.getMissing(localSource);
+                    if (missing != null && !missing.equals(localSource)) {
+                        System.out.println("DEBUG: " + missing + " has not ACKED. Resending...");
                         for (Host host : hostList) {
                             if (host.name.equals(missing)) {
-                                mm.source = localSource;
-                                mm.dest = missing;
-                                host.sock.send(mm);
+                                MulticastMessage mm2 = new MulticastMessage(mm, mm.group);
+                                mm2.dest = missing;
+                                mm2.source = localSource;
+                                MulticastMessage localack = new MulticastMessage(missing, "ACK", "ACK",
+                                        clock.getTimestamp(), mm2.group);
+                                localack.set_source(localSource);
+                                localack.set_seqNum(mm2.sequenceNumber);
+                                MulticastMessage localack2 = new MulticastMessage(missing, "ACK", "ACK",
+                                        clock.getTimestamp(), mm2.group);
+                                localack2.set_source(missing);
+                                localack2.set_seqNum(mm2.sequenceNumber);
+                                mm2.acksReceived = mm.acksReceived;
+                                mm2.acksReceived.add(localack);
+                                host.sock.send(mm2);
+                                mm2.acksReceived.remove(localack);
+                                mm2.acksReceived.remove(localack2);
                             }
                         }
                     }
@@ -502,27 +521,29 @@ public class MessagePasser {
                     if (m.dest.equals(dst) || dst == null) {
                         if (m.kind.equals(kind) || kind == null) {
                             if (m.sequenceNumber == seq || seq == -1) {
-                              //  if (m.getDupe() != null
+                                //  if (m.getDupe() != null
                                 //        && m.getDupe() == duplicate) {
-                                    if (action.equals("drop")) {
-                                        System.out
-                                                .println("dropped--------------------------------");
-                                        return receiveWithMulticast();
-                                    } else if (action.equals("delay")) {
-                                        System.out
-                                                .println("delay----------------------------------------");
+                                if (action.equals("drop")) {
+                                    System.out
+                                            .println("dropped--------------------------------");
+                                    return receiveWithMulticast();
+                                } else if (action.equals("delay")) {
+                                    System.out
+                                            .println("delay----------------------------------------");
+                          //          if (!recvDelayQueue.contains(m)) {
                                         recvDelayQueue.add(m);
-                                        delayed = true;
-                                        return receiveWithMulticast();
-                                    } else if (action.equals("duplicate")) {
-                                        System.out
-                                                .println("duplicated-------------------------------");
-                                        m.set_duplicate(true);
-                                        recvDelayQueue.add(m);
-                                        delayed = false;
-                                        break;
-                                    }
-                              //  }
+                            //        }
+                                    delayed = true;
+                                    return receiveWithMulticast();
+                                } else if (action.equals("duplicate")) {
+                                    System.out
+                                            .println("duplicated-------------------------------");
+                                    m.set_duplicate(true);
+                                    recvDelayQueue.add(m);
+                                    delayed = false;
+                                    break;
+                                }
+                                //  }
                             }
                         }
                     }
@@ -547,11 +568,7 @@ public class MessagePasser {
                         System.out.println("DEBUG: Received, adding to queue");
                         q.addAck(m);
                     }
-                    if (q.fullyAcked()) {
-                        System.out.println("DEBUG: Fully acked, sending to app");
-                        multicastQueue.remove(q);
-                        return q;
-                    }
+                    return receiveWithMulticast();
                 }
             } else {
                 boolean dupmulti = false;
@@ -569,7 +586,7 @@ public class MessagePasser {
             }
             return receiveWithMulticast();
         }
-        return null;
+        return m;
     }
 
     private void sortMulticastQueue() {
@@ -603,9 +620,8 @@ public class MessagePasser {
         for (int i = 0; i < hostList.size(); i++) {
             if (hostList.get(i).name.equals("logger")) {
                 hostList.get(i).sock.send(tm);
-            
 
-}
+            }
         }
     }
 }

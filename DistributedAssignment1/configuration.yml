@@ -25,9 +25,8 @@ sendRules :
   - action : drop 
     kind : Lookup
 receiveRules :
-  - action : drop
-    src : bob
-    seqNum : 1
+  - action : delay
+    src : daphne
 
 groups :
   - name : Group1

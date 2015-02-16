@@ -20,6 +20,7 @@ public class MulticastMessage extends TimeStampedMessage implements Serializable
         super(m.getMessage(),m.stamp);
         group = newgroup;
         timeReceived = System.currentTimeMillis();
+        acksReceived = new ArrayList<TimeStampedMessage>();
     }
     
     //adds ack to acklist
@@ -37,17 +38,17 @@ public class MulticastMessage extends TimeStampedMessage implements Serializable
     
     //will return true if the number of acks received equals the number of members in the group (means it also inludes own ack if self is in group)
     public boolean fullyAcked(){
-        return acksReceived.size() == group.members.size();
+        return acksReceived.size() == group.members.size()-1;
     }
     
-    public String getMissing(){
+    public String getMissing(String localSource){
         if(fullyAcked()){
             return null;
         }
         for(String member : group.members){
             boolean hasAcked = false;
             for(TimeStampedMessage ack : acksReceived){
-                if(member.equals(ack.source)){
+                if(member.equals(ack.source) && !member.equals(localSource)){
                     hasAcked = true;
                 }
             }
