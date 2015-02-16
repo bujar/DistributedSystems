@@ -7,6 +7,7 @@ public class MulticastMessage extends TimeStampedMessage implements Serializable
     private static final long serialVersionUID = 1529127835408294642L;
     Group group;
     long timeReceived = 0;
+    TimeStamp globalStamp;
     ArrayList<TimeStampedMessage> acksReceived;
     
     public MulticastMessage(String newdest, String newkind, Object newdata, TimeStamp newstamp, Group newgroup) {

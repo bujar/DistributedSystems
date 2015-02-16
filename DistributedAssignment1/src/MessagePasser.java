@@ -404,11 +404,13 @@ public class MessagePasser {
         if (group == null) {
             return;
         }
-
+        TimeStamp currentTime = clock.getTimestamp();
         // send to all members of group
         for (String member : group.members) {
             m = new MulticastMessage(member, kind, message,
                     clock.getTimestamp(), group);
+            m.globalStamp = currentTime;
+            
             m.set_source(localSource);
             // if it is an ack message
             if (sequenceNumber != -1) {
@@ -596,9 +598,9 @@ public class MessagePasser {
             while (flag) {
                 flag = false;
                 for (int i = 0; i < multicastQueue.size() - 1; i++) {
-                    if (multicastQueue.get(i).stamp
+                    if (multicastQueue.get(i).globalStamp
                             .happenedAfter(multicastQueue
-                                    .get(i + 1).stamp)) {
+                                    .get(i + 1).globalStamp)) {
                         Collections.swap(multicastQueue, i, i + 1);
                         flag = true;
                     }
