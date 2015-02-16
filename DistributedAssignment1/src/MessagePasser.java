@@ -456,13 +456,14 @@ public class MessagePasser {
                     pushedMulticastQueue.add(mm);
                     return mm;
                 }
+                System.out.println("DUP Multicast found. removing.");
                 multicastQueue.remove(mm);
 
             } else {
                 if (mm.getTimePassed(System.currentTimeMillis()) > 2000) {
                     mm.timeReceived = System.currentTimeMillis();
                     String missing = mm.getMissing(localSource);
-                    if (missing != null && !missing.equals(localSource)) {
+                    if (missing != null && !missing.equals(localSource) && mm.source == localSource) {
                         System.out.println("DEBUG: " + missing + " has not ACKED. Resending...");
                         for (Host host : hostList) {
                             if (host.name.equals(missing)) {
