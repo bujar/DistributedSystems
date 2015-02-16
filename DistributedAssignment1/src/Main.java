@@ -100,13 +100,14 @@ class testNode implements Runnable {
 			if (tm != null) {
 				if (msg.logAllMessages)
 					msg.sendToLogger(tm);
-				System.out.println(name + " received: " + tm.data + " from "
+				System.out.println("\n"+name + " received: " + tm.data + " from "
 						+ tm.source);
 				System.out.print("  Received TimeStamp:");
 				for (int i = 0; i < tm.stamp.value.length; i++) {
 					System.out.print(" " + tm.stamp.value[i]);
 				}
 				System.out.println("");
+                                System.out.println("");
 			}
 			try {
 				Thread.sleep(1000);
