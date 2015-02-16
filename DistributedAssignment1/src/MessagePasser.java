@@ -410,7 +410,7 @@ public class MessagePasser {
             m = new MulticastMessage(member, kind, message,
                     clock.getTimestamp(), group);
             m.globalStamp = currentTime;
-            
+
             m.set_source(localSource);
             // if it is an ack message
             if (sequenceNumber != -1) {
@@ -465,26 +465,19 @@ public class MessagePasser {
                 if (mm.getTimePassed(System.currentTimeMillis()) > 2000) {
                     mm.timeReceived = System.currentTimeMillis();
                     String missing = mm.getMissing(localSource);
-                    if (missing != null && !missing.equals(localSource) && mm.source == localSource) {
+                    if (missing != null && !missing.equals(localSource) && mm.source.equals(localSource)) {
                         System.out.println("DEBUG: " + missing + " has not ACKED. Resending...");
                         for (Host host : hostList) {
                             if (host.name.equals(missing)) {
-                                MulticastMessage mm2 = new MulticastMessage(mm, mm.group);
-                                mm2.dest = missing;
-                                mm2.source = localSource;
                                 MulticastMessage localack = new MulticastMessage(missing, "ACK", "ACK",
-                                        clock.getTimestamp(), mm2.group);
+                                        clock.getTimestamp(), mm.group);
                                 localack.set_source(localSource);
-                                localack.set_seqNum(mm2.sequenceNumber);
-                                MulticastMessage localack2 = new MulticastMessage(missing, "ACK", "ACK",
-                                        clock.getTimestamp(), mm2.group);
-                                localack2.set_source(missing);
-                                localack2.set_seqNum(mm2.sequenceNumber);
-                                mm2.acksReceived = mm.acksReceived;
-                                mm2.acksReceived.add(localack);
-                                host.sock.send(mm2);
-                                mm2.acksReceived.remove(localack);
-                                mm2.acksReceived.remove(localack2);
+                                localack.set_seqNum(mm.sequenceNumber);
+                                mm.acksReceived.add(localack);
+                                mm.dest = missing;
+                                host.sock.send(mm);
+                                mm.dest = localSource;
+                                mm.acksReceived.remove(localack);
                             }
                         }
                     }
@@ -508,8 +501,7 @@ public class MessagePasser {
 
             m = hostList.get(i).sock.receiveQueue.poll();
             System.out.println("DEBUG: Receiving message from " + m.source
-                    + " to " + m.dest + " " + m.kind + " with sequenceNum: "
-                    + m.sequenceNumber);
+                      + " to " + m.dest + " " + m.kind);
 
             checkForUpdate();
             for (Rule rule : recvRules) {
@@ -533,9 +525,9 @@ public class MessagePasser {
                                 } else if (action.equals("delay")) {
                                     System.out
                                             .println("delay----------------------------------------");
-                          //          if (!recvDelayQueue.contains(m)) {
+                                    if (!recvDelayQueue.contains(m)) {
                                         recvDelayQueue.add(m);
-                            //        }
+                                    }
                                     delayed = true;
                                     return receiveWithMulticast();
                                 } else if (action.equals("duplicate")) {
@@ -565,18 +557,35 @@ public class MessagePasser {
         // if its a multicast message
         if (m != null && m.group != null) {
             if (m.kind.equals("ACK")) {
+                boolean found = false;
                 for (MulticastMessage q : multicastQueue) {
-                    System.out.println(m.sequenceNumber + " : " + q.sequenceNumber);
+            //        System.out.println(m.sequenceNumber + " : " + q.sequenceNumber);
                     if (m.sequenceNumber == q.sequenceNumber) {
-                        System.out.println("DEBUG: Received, adding to queue");
+                        found = true;
+                        System.out.println("DEBUG: Received ACK from " + m.source);
                         q.addAck(m);
                     }
-                    return receiveWithMulticast();
                 }
+                boolean hasMultiDelay = false;
+                for (MulticastMessage q : recvDelayQueue) {
+                    if (q.group != null && !q.kind.equals("ACK")) {
+                        hasMultiDelay = true;
+                    }
+                }
+                if (!found && !recvDelayQueue.isEmpty() && hasMultiDelay) {
+                    recvDelayQueue.add(m);
+                }
+
+                return receiveWithMulticast();
             } else {
                 boolean dupmulti = false;
                 for (MulticastMessage q : multicastQueue) {
-                    if (m.sequenceNumber == q.sequenceNumber && m.group.name.equals(q.group.name)) {
+                    if (m.source.equals(q.source) && m.sequenceNumber == q.sequenceNumber && m.group.name.equals(q.group.name)) {
+                        dupmulti = true;
+                    }
+                }
+                for (MulticastMessage q : pushedMulticastQueue) {
+                    if (m.source.equals(q.source) && m.sequenceNumber == q.sequenceNumber && m.group.name.equals(q.group.name)) {
                         dupmulti = true;
                     }
                 }
