@@ -503,7 +503,7 @@ public class MessagePasser {
                 multicastQueue.remove(mm);
 
             } else {
-                if (mm.getTimePassed(System.currentTimeMillis()) > 2000) {
+                if (mm.getTimePassed(System.currentTimeMillis()) > 3000) {
                     mm.timeReceived = System.currentTimeMillis();
                     String missing = mm.getMissing(localSource);
                     if (missing != null && !missing.equals(localSource) && mm.source.equals(localSource)) {
@@ -637,7 +637,7 @@ public class MessagePasser {
                 }
                 System.out.println("DEBUG: Sending ACK message");
                 try {
-                            Thread.sleep(500);
+                            Thread.sleep(1000);
                         } catch (InterruptedException ex1) {
                             Logger.getLogger(MessagePasser.class.getName())
                                     .log(Level.SEVERE, null, ex1);
