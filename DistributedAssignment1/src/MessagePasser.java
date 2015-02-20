@@ -671,9 +671,9 @@ public class MessagePasser {
         } else if (mm.kind.equals("MERelease")) {
             if (!MERequestQueue.isEmpty()) {
                 MulticastMessage mm2 = MERequestQueue.getFirst();
-                MulticastMessage MERelease = new MulticastMessage(mm2.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm2.group);
-                MERelease.globalStamp = mm2.globalStamp;
-                send(MERelease);
+                MulticastMessage MEAck = new MulticastMessage(mm2.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm2.group);
+                MEAck.globalStamp = mm2.globalStamp;
+                send(MEAck);
                 voted = true;
                 MERequestQueue.remove(mm2);
             } else {
@@ -707,7 +707,9 @@ public class MessagePasser {
         sendMulticast(MEGroup.name, "MERelease", "", -1, null);
         if (!MERequestQueue.isEmpty()) {
             MulticastMessage mm = MERequestQueue.getFirst();
-            send(new MulticastMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm.group));
+            MulticastMessage MEAck = new MulticastMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm.group);
+            MEAck.globalStamp = mm.globalStamp;
+            send(MEAck);
             voted = true;
             MERequestQueue.remove(mm);
         } else {
