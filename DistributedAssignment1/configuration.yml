@@ -75,10 +75,12 @@ groups :
     - frank
     - ellen
   - name : Group3
+    members :
     - daphnie
     - frank
     - gus
   - name : Group4
+    members :
     - gus
     - alice
     - charlie

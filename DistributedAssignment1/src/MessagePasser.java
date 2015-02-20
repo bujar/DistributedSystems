@@ -403,8 +403,8 @@ public class MessagePasser {
                     multiMsg.stamp = clock.getTimestamp();
                     if(multiMsg.globalStamp == null){
                         multiMsg.globalStamp = clock.getTimestamp();
+                        System.out.println("setting globalStamp in send");
                     }
-                    System.out.println("setting globalStamp in send");
                 } else {
                     multiMsg = (MulticastMessage) m;
                     multiMsg.stamp = clock.getTimestamp();
@@ -653,7 +653,9 @@ public class MessagePasser {
             if (!voted && !hasCritSec() && !mm.source.equals(localSource)) {
                 voted = true;
                 System.out.println(mm + " " + mm.group + " " + mm.source);
-                send(new MulticastMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm.group));
+                MulticastMessage MEack = new MulticastMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm.group);
+                MEack.globalStamp = mm.globalStamp;
+                send(MEack);
             } else {
                 MERequestQueue.add(mm);
                 sortQueue(MERequestQueue);
