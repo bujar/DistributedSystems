@@ -46,6 +46,7 @@ public class MessagePasser {
     public LinkedList<MulticastMessage> multicastQueue;
     public LinkedList<MulticastMessage> pushedMulticastQueue;
     public LinkedList<MulticastMessage> MERequestQueue;
+    public ArrayList<String> memberOfList;
     public MulticastMessage CriticalSection;
     public Group MEGroup;
 
@@ -64,6 +65,7 @@ public class MessagePasser {
         multicastQueue = new LinkedList<MulticastMessage>();
         pushedMulticastQueue = new LinkedList<MulticastMessage>();
         MERequestQueue = new LinkedList<MulticastMessage>();
+        memberOfList = new ArrayList<String>();
         checkForUpdate();
         Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
         ArrayList<Map<String, Object>> groups = data.get("groups");
@@ -76,7 +78,7 @@ public class MessagePasser {
         }
 
         ArrayList<Map<String, Object>> config = data.get("configuration");
-
+        
         Integer localport = 0;
         Host localhost = null;
         boolean myturn = false;
@@ -89,6 +91,7 @@ public class MessagePasser {
         for (Map<String, Object> key : config) {
             String name = (String) key.get("name");
             if (name.equals(localName)) {
+            	memberOfList = (ArrayList) key.get("memberOf");
                 String ipAddr = (String) key.get("ip");
                 int port = (Integer) key.get("port");
                 localport = Integer.valueOf(port);
