@@ -636,6 +636,12 @@ public class MessagePasser {
                     multicastQueue.add(m);
                 }
                 System.out.println("DEBUG: Sending ACK message");
+                try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException ex1) {
+                            Logger.getLogger(MessagePasser.class.getName())
+                                    .log(Level.SEVERE, null, ex1);
+                        }
                 sendAck(m.sequenceNumber, m.globalStamp, m.group);
             }
             return receiveWithMulticast();
