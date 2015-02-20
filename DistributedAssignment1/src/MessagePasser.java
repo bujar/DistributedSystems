@@ -656,7 +656,7 @@ public class MessagePasser {
         }
         if (mm.kind.equals("MERequest")) {
             //if not already voted and not in CS, send ACK
-            if (!voted && !hasCritSec() && !mm.source.equals(localSource)) {
+            if (!voted && !hasCritSec() && !mm.source.equals(localSource) && (CriticalSection == null || (MERequestQueue.getFirst().globalStamp.happenedBefore(CriticalSection.stamp) || MERequestQueue.getFirst().globalStamp.concurrentWith(CriticalSection.stamp)))) {
                 voted = true;
                 System.out.println(mm + " " + mm.group + " " + mm.source);
                 MulticastMessage MEack = new MulticastMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm.group);
