@@ -394,7 +394,7 @@ public class MessagePasser {
                 }
                 seqNum++;
                 MulticastMessage multiMsg;
-                if (((MulticastMessage) m).group == null && !m.kind.equals("ACK")) {
+                if (!(m instanceof MulticastMessage) && !m.kind.equals("ACK")) {
                     TimeStampedMessage tm = new TimeStampedMessage(m,
                             clock.getTimestamp());
                     multiMsg = new MulticastMessage(tm, null);
