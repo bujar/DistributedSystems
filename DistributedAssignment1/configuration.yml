@@ -1,27 +1,53 @@
 configuration :
   - name : alice
-    ip : 10.0.1.34
+    ip : 10.0.1.33
     port : 12344  
     memberOf :
       - Group1
+      - Group4
                
   - name : bob
-    ip : 10.0.1.34
+    ip : 10.0.1.33
     port : 14255
     memberOf :
       - Group1
       - Group2
     
   - name : charlie
-    ip : 10.0.1.34
+    ip : 10.0.1.33
     port : 12998
     memberOf :
       - Group2
+      - Group4
     
-  - name : logger
+  - name : daphnie
     ip : 10.0.1.34
     port : 1987
-    logAllMessages : false
+    memberOf :
+      - Group1
+      - Group3
+
+  
+  - name : ellen
+    ip : 10.0.1.34
+    port : 15255
+    memberOf :
+      - Group1
+      - Group2
+    
+  - name : frank
+    ip : 10.0.1.34
+    port : 16998
+    memberOf :
+      - Group2
+      - Group3
+    
+  - name : gus
+    ip : 10.0.1.34
+    port : 17987
+    memberOf :
+      - Group3
+      - Group4
 
 
 sendRules :
@@ -30,19 +56,29 @@ sendRules :
   - action : delay 
     kind : HTTP
   - action : drop 
-    kind : Lookup
+    dest : joe
 receiveRules :
   - action : drop
-    src : daphne
+    src : joe
 
 groups :
   - name : Group1
     members :
     - alice
     - bob
-    - charlie
+    - daphnie
+    - ellen
   - name : Group2
     members :
     - charlie
     - bob
-    - logger
+    - frank
+    - ellen
+  - name : Group3
+    - daphnie
+    - frank
+    - gus
+  - name : Group4
+    - gus
+    - alice
+    - charlie
