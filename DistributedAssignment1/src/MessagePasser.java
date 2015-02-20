@@ -675,7 +675,7 @@ public class MessagePasser {
             }
             return receiveWithME();
         } else if (mm.kind.equals("MERelease")) {
-            if (!MERequestQueue.isEmpty()) {
+            if (!MERequestQueue.isEmpty() && MERequestQueue.getFirst().globalStamp.happenedBefore(CriticalSection.stamp)) {
                 MulticastMessage mm2 = MERequestQueue.getFirst();
                 MulticastMessage MEAck = new MulticastMessage(mm2.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm2.group);
                 MEAck.globalStamp = mm2.globalStamp;
@@ -705,7 +705,7 @@ public class MessagePasser {
                 System.out.println(m.source);
             }
         }
-        return CriticalSection != null && CriticalSection.fullyAcked();
+        return CriticalSection != null && CriticalSection.fullyAcked() && !voted;
     }
 
     public void releaseCritSec() {
