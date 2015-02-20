@@ -35,7 +35,7 @@ class LoggerNode implements Runnable {
 		msg = new MessagePasser(configfile, name, clockType);
 
 		while (true) {
-			TimeStampedMessage tm = msg.receiveWithTimeStamp();
+			TimeStampedMessage tm = msg.receiveWithME();
 			if (tm != null) {
 				if (tm.data.equals("showlogs")) {
 

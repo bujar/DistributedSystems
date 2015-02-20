@@ -35,7 +35,13 @@ public class Main {
 					String group = parse.next();
 					String kind = parse.next();
 					String message = parse.nextLine();
-					node.msg.sendMulticast(group, kind, message, -1);
+					node.msg.sendMulticast(group, kind, message, -1, null);
+				}else if (name.equals("ReleaseME")) {
+					node.msg.releaseCritSec();
+				}else if (name.equals("RequestME")) {
+					node.msg.requestCritSec();
+				}else if (name.equals("HasME")) {
+					System.out.println(node.msg.hasCritSec());
 				} else if (name.equals("showtime")) {
 					TimeStamp newstamp = node.msg.getTimestamp();
 					System.out.print("New TimeStamnp:");
@@ -96,7 +102,7 @@ class testNode implements Runnable {
 		// System.out.println(name + " received: " + m.data);
 		// }
 		while (true) {
-			MulticastMessage tm = msg.receiveWithMulticast();
+			MulticastMessage tm = msg.receiveWithME();
 			if (tm != null) {
 				if (msg.logAllMessages)
 					msg.sendToLogger(tm);

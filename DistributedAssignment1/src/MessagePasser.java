@@ -66,6 +66,7 @@ public class MessagePasser {
         pushedMulticastQueue = new LinkedList<MulticastMessage>();
         MERequestQueue = new LinkedList<MulticastMessage>();
         memberOfList = new ArrayList<String>();
+
         checkForUpdate();
         Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
         ArrayList<Map<String, Object>> groups = data.get("groups");
@@ -78,7 +79,7 @@ public class MessagePasser {
         }
 
         ArrayList<Map<String, Object>> config = data.get("configuration");
-        
+
         Integer localport = 0;
         Host localhost = null;
         boolean myturn = false;
@@ -91,7 +92,7 @@ public class MessagePasser {
         for (Map<String, Object> key : config) {
             String name = (String) key.get("name");
             if (name.equals(localName)) {
-            	memberOfList = (ArrayList) key.get("memberOf");
+                memberOfList = (ArrayList) key.get("memberOf");
                 String ipAddr = (String) key.get("ip");
                 int port = (Integer) key.get("port");
                 localport = Integer.valueOf(port);
@@ -99,6 +100,15 @@ public class MessagePasser {
                 listencounter = totalnodes;
             }
             totalnodes++;
+        }
+        for (Group g : groupList) {
+            if (memberOfList != null && g.name.equals(memberOfList.get(0))) {
+                MEGroup = g;
+            }
+        }
+        if (MEGroup == null) {
+            System.out.println("MEGroup Null. (WHY)");
+            return;
         }
 
         // intiialize clock
@@ -379,11 +389,27 @@ public class MessagePasser {
                         }
                     }
                 }
-                m.set_seqNum(seqNum);
+                if (m.sequenceNumber == 0) {
+                    m.set_seqNum(seqNum);
+                }
                 seqNum++;
-                TimeStampedMessage tm = new TimeStampedMessage(m,
-                        clock.getTimestamp());
-                MulticastMessage multiMsg = new MulticastMessage(tm, null);
+                MulticastMessage multiMsg;
+                if (((MulticastMessage) m).group == null && !m.kind.equals("ACK")) {
+                    TimeStampedMessage tm = new TimeStampedMessage(m,
+                            clock.getTimestamp());
+                    multiMsg = new MulticastMessage(tm, null);
+                } else if (!m.kind.equals("ACK")) {
+                    multiMsg = (MulticastMessage) m;
+                    multiMsg.stamp = clock.getTimestamp();
+                    if(multiMsg.globalStamp == null){
+                        multiMsg.globalStamp = clock.getTimestamp();
+                    }
+                    System.out.println("setting globalStamp in send");
+                } else {
+                    multiMsg = (MulticastMessage) m;
+                    multiMsg.stamp = clock.getTimestamp();
+                    System.out.println("setting stamp for ACK");
+                }
                 hostList.get(i).sock.send(multiMsg);
                 while (!sendDelayQueue.isEmpty()) {
                     TimeStampedMessage delayedMessage = sendDelayQueue.poll();
@@ -403,7 +429,7 @@ public class MessagePasser {
     }
 
     public void sendMulticast(String groupName, String kind, String message,
-            int sequenceNumber) {
+            int sequenceNumber, TimeStamp newglobalStamp) {
         Group group = null;
         MulticastMessage m = null;
 
@@ -421,7 +447,6 @@ public class MessagePasser {
         for (String member : group.members) {
             m = new MulticastMessage(member, kind, message,
                     clock.getTimestamp(), group);
-            m.globalStamp = currentTime;
 
             m.set_source(localSource);
             // if it is an ack message
@@ -431,9 +456,14 @@ public class MessagePasser {
             else {
                 m.set_seqNum(seqNum);
             }
+            if (newglobalStamp == null) {
+                m.globalStamp = currentTime;
+            } else {
+                m.globalStamp = newglobalStamp;
+            }
             for (int i = 0; i < hostList.size(); i++) {
                 if (hostList.get(i).name.equals(m.dest)) {
-                    hostList.get(i).sock.send(m);
+                    send(m);
                 }
             }
             if (m.dest.equals(localSource) && !m.kind.equals("ACK")) {
@@ -459,7 +489,7 @@ public class MessagePasser {
 
     public MulticastMessage receiveWithMulticast() {
         if (!multicastQueue.isEmpty()) {
-            sortMulticastQueue(multicastQueue);
+            sortQueue(multicastQueue);
             MulticastMessage mm = multicastQueue.getFirst();
             if (mm.fullyAcked()) {
                 mm.acksReceived.clear();
@@ -486,7 +516,7 @@ public class MessagePasser {
                                 localack.set_seqNum(mm.sequenceNumber);
                                 mm.acksReceived.add(localack);
                                 mm.dest = missing;
-                                host.sock.send(mm);
+                                send(mm);
                                 mm.dest = localSource;
                                 mm.acksReceived.remove(localack);
                             }
@@ -566,12 +596,13 @@ public class MessagePasser {
         }
 
         // if its a multicast message
-        if (m != null && m.group != null) {
+        if (m != null && m.group != null && !m.kind.equals("MERelease") && !m.kind.equals("MEAck")) {
             if (m.kind.equals("ACK")) {
                 boolean found = false;
                 for (MulticastMessage q : multicastQueue) {
-                    //        System.out.println(m.sequenceNumber + " : " + q.sequenceNumber);
-                    if (m.sequenceNumber == q.sequenceNumber) {
+                    System.out.println(m.sequenceNumber + " : " + q.sequenceNumber);
+                    System.out.println(m.globalStamp + " " + q.globalStamp);
+                    if (m.globalStamp.equals(q.globalStamp)) {
                         found = true;
                         System.out.println("DEBUG: Received ACK from " + m.source);
                         q.addAck(m);
@@ -591,12 +622,12 @@ public class MessagePasser {
             } else {
                 boolean dupmulti = false;
                 for (MulticastMessage q : multicastQueue) {
-                    if (m.source.equals(q.source) && m.sequenceNumber == q.sequenceNumber && m.group.name.equals(q.group.name)) {
+                    if (m.source.equals(q.source) && m.globalStamp.equals(q.globalStamp) && m.group.name.equals(q.group.name)) {
                         dupmulti = true;
                     }
                 }
                 for (MulticastMessage q : pushedMulticastQueue) {
-                    if (m.source.equals(q.source) && m.sequenceNumber == q.sequenceNumber && m.group.name.equals(q.group.name)) {
+                    if (m.source.equals(q.source) && m.globalStamp.equals(q.globalStamp) && m.group.name.equals(q.group.name)) {
                         dupmulti = true;
                     }
                 }
@@ -605,7 +636,7 @@ public class MessagePasser {
                     multicastQueue.add(m);
                 }
                 System.out.println("DEBUG: Sending ACK message");
-                sendAck(m.sequenceNumber, m.group);
+                sendAck(m.sequenceNumber, m.globalStamp, m.group);
             }
             return receiveWithMulticast();
         }
@@ -614,14 +645,18 @@ public class MessagePasser {
 
     public MulticastMessage receiveWithME() {
         MulticastMessage mm = receiveWithMulticast();
+        if (mm == null) {
+            return null;
+        }
         if (mm.kind.equals("MERequest")) {
             //if not already voted and not in CS, send ACK
-            if (!voted && !hasCritSec()) {
+            if (!voted && !hasCritSec() && !mm.source.equals(localSource)) {
                 voted = true;
-                send(new TimeStampedMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp()));
+                System.out.println(mm + " " + mm.group + " " + mm.source);
+                send(new MulticastMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm.group));
             } else {
                 MERequestQueue.add(mm);
-                //TODO: sort NERequestQueue by it's GlobalStamp, oldest should be on top
+                sortQueue(MERequestQueue);
             }
             return receiveWithME();
         } else if (mm.kind.equals("MEAck")) {
@@ -634,7 +669,7 @@ public class MessagePasser {
         } else if (mm.kind.equals("MERelease")) {
             if (!MERequestQueue.isEmpty()) {
                 MulticastMessage mm2 = MERequestQueue.getFirst();
-                send(new TimeStampedMessage(mm2.source, "MEAck", "ME Acknowledgement", clock.getTimestamp()));
+                send(new MulticastMessage(mm2.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm2.group));
                 voted = true;
                 MERequestQueue.remove(mm2);
             } else {
@@ -647,20 +682,28 @@ public class MessagePasser {
     }
 
     public void requestCritSec() {
+        if (MEGroup == null) {
+            System.out.println("MEGROUP is null when request crit sec");
+        }
         CriticalSection = new MulticastMessage("", "", "", clock.getTimestamp(), MEGroup);
-        sendMulticast(MEGroup.name, "MERequest", "", -1);
+        sendMulticast(MEGroup.name, "MERequest", "", -1, null);
     }
 
     public boolean hasCritSec() {
+        if (CriticalSection != null) {
+            for (TimeStampedMessage m : CriticalSection.acksReceived) {
+                System.out.println(m.source);
+            }
+        }
         return CriticalSection != null && CriticalSection.fullyAcked();
     }
 
     public void releaseCritSec() {
         CriticalSection = null;
-        sendMulticast(MEGroup.name, "MERelease", "", -1);
+        sendMulticast(MEGroup.name, "MERelease", "", -1, null);
         if (!MERequestQueue.isEmpty()) {
             MulticastMessage mm = MERequestQueue.getFirst();
-            send(new TimeStampedMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp()));
+            send(new MulticastMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm.group));
             voted = true;
             MERequestQueue.remove(mm);
         } else {
@@ -668,7 +711,7 @@ public class MessagePasser {
         }
     }
 
-    private void sortMulticastQueue(LinkedList<MulticastMessage> sortthislist) {
+    private void sortQueue(LinkedList<MulticastMessage> sortthislist) {
         if (sortthislist.size() > 1) {
             boolean flag = true;
             while (flag) {
@@ -686,8 +729,8 @@ public class MessagePasser {
         }
     }
 
-    private void sendAck(int sequenceNumber, Group group) {
-        sendMulticast(group.name, "ACK", "ACK", sequenceNumber);
+    private void sendAck(int sequenceNumber, TimeStamp globalStamp, Group group) {
+        sendMulticast(group.name, "ACK", "ACK", sequenceNumber, globalStamp);
 
     }
 

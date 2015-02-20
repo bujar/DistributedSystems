@@ -26,14 +26,23 @@ public class MulticastMessage extends TimeStampedMessage implements Serializable
     
     //adds ack to acklist
     public void addAck(MulticastMessage newack){
-        if(!group.members.contains(newack.source) || !group.name.equals(newack.group.name)){
+        if(group.members == null){
+            System.out.println("group == null when Acked");
+        }
+        if(newack.group == null){
+            System.out.println("newack.group == null when Acked");
+        }
+        System.out.println("Checking Ack for applicability");
+        if((!group.members.contains(newack.source) || !group.name.equals(newack.group.name))&& !this.globalStamp.equals(newack.globalStamp)){
             return;
         }
+        System.out.println("Checking for dup Acks");
         for(int i = 0; i < acksReceived.size(); i++){
             if(acksReceived.get(i).source.equals(newack.source)){
                return; 
             }
         }
+        System.out.println("Adding ACK NOW");
         acksReceived.add(newack);
     }
     
