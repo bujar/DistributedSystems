@@ -2,14 +2,21 @@ configuration :
   - name : alice
     ip : 10.0.1.34
     port : 12344  
+    memberOf :
+      - Group1
                
   - name : bob
     ip : 10.0.1.34
     port : 14255
+    memberOf :
+      - Group1
+      - Group2
     
   - name : charlie
     ip : 10.0.1.34
     port : 12998
+    memberOf :
+      - Group2
     
   - name : logger
     ip : 10.0.1.34
