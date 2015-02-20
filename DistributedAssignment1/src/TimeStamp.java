@@ -68,4 +68,14 @@ public class TimeStamp implements Serializable {
         }
         return !equal && greaterthan;
     }
+    
+    public boolean equals(TimeStamp timestamp){
+        boolean matches = true;
+        for (int i = 0; i < this.value.length; i++) {
+            if(this.value[i] != timestamp.value[i]){
+                matches = false;
+            }
+        }
+        return matches;
+    }
 }

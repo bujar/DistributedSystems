@@ -7,17 +7,17 @@
 # The local node’s name is included in this list
 configuration :
   - name : alice
-    ip : 127.0.0.1
+    ip : 128.237.162.178
     port : 12344 # This is the incoming port on which MP will listen
                   # May be changed for further communication as usual
   - name : bob
-    ip : 127.0.0.1
+    ip : 128.237.162.178
     port : 14255
   - name : charlie
-    ip : 127.0.0.1
+    ip : 128.237.164.9
     port : 12998
   - name : daphnie
-    ip : 127.0.0.1
+    ip : 128.237.164.9
     port : 1987
 
 sendRules :

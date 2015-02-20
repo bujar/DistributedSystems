@@ -41,12 +41,20 @@ public class MessagePasser {
     public boolean delayed;
     public ClockService clock;
     public boolean logAllMessages;
+    public boolean voted;
+    public boolean inCrit;
     public LinkedList<MulticastMessage> multicastQueue;
     public LinkedList<MulticastMessage> pushedMulticastQueue;
+    public LinkedList<MulticastMessage> MERequestQueue;
+    public MulticastMessage CriticalSection;
+    public Group MEGroup;
 
     public MessagePasser(String pathName, String localName, String clockType) {
 
+        //TODO: assign MEGroup to the single group it can broadcast to to request a Critical Section
         delayed = false;
+        voted = false;
+        inCrit = false;
         seqNum = 0;
         configURL = pathName;
         configFile = "configuration.yml";
@@ -55,6 +63,7 @@ public class MessagePasser {
         recvDelayQueue = new LinkedList<MulticastMessage>();
         multicastQueue = new LinkedList<MulticastMessage>();
         pushedMulticastQueue = new LinkedList<MulticastMessage>();
+        MERequestQueue = new LinkedList<MulticastMessage>();
         checkForUpdate();
         Map<String, ArrayList<Map<String, Object>>> data = getYamlData(configFile);
         ArrayList<Map<String, Object>> groups = data.get("groups");
@@ -422,7 +431,6 @@ public class MessagePasser {
             for (int i = 0; i < hostList.size(); i++) {
                 if (hostList.get(i).name.equals(m.dest)) {
                     hostList.get(i).sock.send(m);
-
                 }
             }
             if (m.dest.equals(localSource) && !m.kind.equals("ACK")) {
@@ -448,7 +456,7 @@ public class MessagePasser {
 
     public MulticastMessage receiveWithMulticast() {
         if (!multicastQueue.isEmpty()) {
-            sortMulticastQueue();
+            sortMulticastQueue(multicastQueue);
             MulticastMessage mm = multicastQueue.getFirst();
             if (mm.fullyAcked()) {
                 mm.acksReceived.clear();
@@ -501,7 +509,7 @@ public class MessagePasser {
 
             m = hostList.get(i).sock.receiveQueue.poll();
             System.out.println("DEBUG: Receiving message from " + m.source
-                      + " to " + m.dest + " " + m.kind);
+                    + " to " + m.dest + " " + m.kind);
 
             checkForUpdate();
             for (Rule rule : recvRules) {
@@ -559,7 +567,7 @@ public class MessagePasser {
             if (m.kind.equals("ACK")) {
                 boolean found = false;
                 for (MulticastMessage q : multicastQueue) {
-            //        System.out.println(m.sequenceNumber + " : " + q.sequenceNumber);
+                    //        System.out.println(m.sequenceNumber + " : " + q.sequenceNumber);
                     if (m.sequenceNumber == q.sequenceNumber) {
                         found = true;
                         System.out.println("DEBUG: Received ACK from " + m.source);
@@ -601,16 +609,72 @@ public class MessagePasser {
         return m;
     }
 
-    private void sortMulticastQueue() {
-        if (multicastQueue.size() > 1) {
+    public MulticastMessage receiveWithME() {
+        MulticastMessage mm = receiveWithMulticast();
+        if (mm.kind.equals("MERequest")) {
+            //if not already voted and not in CS, send ACK
+            if (!voted && !hasCritSec()) {
+                voted = true;
+                send(new TimeStampedMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp()));
+            } else {
+                MERequestQueue.add(mm);
+                //TODO: sort NERequestQueue by it's GlobalStamp, oldest should be on top
+            }
+            return receiveWithME();
+        } else if (mm.kind.equals("MEAck")) {
+            if (CriticalSection != null) {
+                CriticalSection.addAck(mm);
+            } else {
+                System.out.println("Received MEAck from " + mm.source + " and I dont know why");
+            }
+            return receiveWithME();
+        } else if (mm.kind.equals("MERelease")) {
+            if (!MERequestQueue.isEmpty()) {
+                MulticastMessage mm2 = MERequestQueue.getFirst();
+                send(new TimeStampedMessage(mm2.source, "MEAck", "ME Acknowledgement", clock.getTimestamp()));
+                voted = true;
+                MERequestQueue.remove(mm2);
+            } else {
+                voted = false;
+            }
+            return receiveWithME();
+        } else {
+            return mm;
+        }
+    }
+
+    public void requestCritSec() {
+        CriticalSection = new MulticastMessage("", "", "", clock.getTimestamp(), MEGroup);
+        sendMulticast(MEGroup.name, "MERequest", "", -1);
+    }
+
+    public boolean hasCritSec() {
+        return CriticalSection != null && CriticalSection.fullyAcked();
+    }
+
+    public void releaseCritSec() {
+        CriticalSection = null;
+        sendMulticast(MEGroup.name, "MERelease", "", -1);
+        if (!MERequestQueue.isEmpty()) {
+            MulticastMessage mm = MERequestQueue.getFirst();
+            send(new TimeStampedMessage(mm.source, "MEAck", "ME Acknowledgement", clock.getTimestamp()));
+            voted = true;
+            MERequestQueue.remove(mm);
+        } else {
+            voted = false;
+        }
+    }
+
+    private void sortMulticastQueue(LinkedList<MulticastMessage> sortthislist) {
+        if (sortthislist.size() > 1) {
             boolean flag = true;
             while (flag) {
                 flag = false;
-                for (int i = 0; i < multicastQueue.size() - 1; i++) {
-                    if (multicastQueue.get(i).globalStamp
-                            .happenedAfter(multicastQueue
+                for (int i = 0; i < sortthislist.size() - 1; i++) {
+                    if (sortthislist.get(i).globalStamp
+                            .happenedAfter(sortthislist
                                     .get(i + 1).globalStamp)) {
-                        Collections.swap(multicastQueue, i, i + 1);
+                        Collections.swap(sortthislist, i, i + 1);
                         flag = true;
                     }
                 }
