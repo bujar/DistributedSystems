@@ -675,7 +675,7 @@ public class MessagePasser {
             }
             return receiveWithME();
         } else if (mm.kind.equals("MERelease")) {
-            if (!MERequestQueue.isEmpty() && (CriticalSection == null || MERequestQueue.getFirst().globalStamp.happenedBefore(CriticalSection.stamp))) {
+            if (!MERequestQueue.isEmpty() && (CriticalSection == null || (MERequestQueue.getFirst().globalStamp.happenedBefore(CriticalSection.stamp) || MERequestQueue.getFirst().globalStamp.concurrentWith(CriticalSection.stamp)))) {
                 MulticastMessage mm2 = MERequestQueue.getFirst();
                 MulticastMessage MEAck = new MulticastMessage(mm2.source, "MEAck", "ME Acknowledgement", clock.getTimestamp(), mm2.group);
                 MEAck.globalStamp = mm2.globalStamp;
