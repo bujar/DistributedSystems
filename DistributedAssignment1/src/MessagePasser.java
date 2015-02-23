@@ -403,12 +403,12 @@ public class MessagePasser {
                     multiMsg.stamp = clock.getTimestamp();
                     if(multiMsg.globalStamp == null){
                         multiMsg.globalStamp = clock.getTimestamp();
-                        System.out.println("setting globalStamp in send");
+//                        System.out.println("setting globalStamp in send");
                     }
                 } else {
                     multiMsg = (MulticastMessage) m;
                     multiMsg.stamp = clock.getTimestamp();
-                    System.out.println("setting stamp for ACK");
+//                    System.out.println("setting stamp for ACK");
                 }
                 hostList.get(i).sock.send(multiMsg);
                 while (!sendDelayQueue.isEmpty()) {
@@ -600,8 +600,8 @@ public class MessagePasser {
             if (m.kind.equals("ACK")) {
                 boolean found = false;
                 for (MulticastMessage q : multicastQueue) {
-                    System.out.println(m.sequenceNumber + " : " + q.sequenceNumber);
-                    System.out.println(m.globalStamp + " " + q.globalStamp);
+//                    System.out.println(m.sequenceNumber + " : " + q.sequenceNumber);
+//                    System.out.println(m.globalStamp + " " + q.globalStamp);
                     if (m.globalStamp.equals(q.globalStamp)) {
                         found = true;
                         System.out.println("DEBUG: Received ACK from " + m.source);
@@ -701,8 +701,9 @@ public class MessagePasser {
 
     public boolean hasCritSec() {
         if (CriticalSection != null) {
+        	System.out.println("DEBUG: Currently have ACKs from");
             for (TimeStampedMessage m : CriticalSection.acksReceived) {
-                System.out.println(m.source);
+                System.out.println("\t" + m.source);
             }
         }
         return CriticalSection != null && CriticalSection.fullyAcked() && !voted;
