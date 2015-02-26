@@ -1,0 +1,78 @@
+configuration :
+  - name : alice
+    ip : 10.0.1.33
+    port : 12344  
+    memberOf :
+      - Group2
+               
+  - name : bob
+    ip : 10.0.1.33
+    port : 14255
+    memberOf :
+      - Group3
+    
+  - name : charlie
+    ip : 10.0.1.33
+    port : 12998
+    memberOf :
+      - Group1
+    
+  - name : daphnie
+    ip : 10.0.1.34
+    port : 1987
+    memberOf :
+      - Group2
+
+  - name : ellen
+    ip : 10.0.1.34
+    port : 15255
+    memberOf :
+      - Group3
+    
+  - name : frank
+    ip : 10.0.1.34
+    port : 16998
+    memberOf :
+      - Group1
+    
+  - name : gus
+    ip : 10.0.1.34
+    port : 17987
+    memberOf :
+      - Group2
+
+
+sendRules :
+  - action : duplicate
+    kind : Ack
+  - action : delay 
+    kind : HTTP
+  - action : drop 
+    dest : joe
+receiveRules :
+  - action : drop
+    src : joe
+
+groups :
+  - name : Group1
+    members :
+    - alice
+    - bob
+    - daphnie
+    - ellen
+  - name : Group2
+    members :
+    - charlie
+    - bob
+    - frank
+    - ellen
+  - name : Group3
+    members :
+    - daphnie
+    - frank
+    - gus
+  - name : Group4
+    members :
+    - gus
+    - alice
+    - charlie
